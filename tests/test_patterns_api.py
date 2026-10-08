@@ -124,3 +124,27 @@ def test_board_is_saved_only_in_a_workspace(monkeypatch):
     api.WORKSPACES.clear()                                                   # 読み直しても残っている
     assert c.get("/api/patterns/board", headers=h).json()["groups"][0]["name"] == "減員"
     assert c.put("/api/patterns/board", headers=h, json={"nope": 1}).status_code == 400
+
+
+def test_steward_patrol_watches_and_lists_tasks_without_agent(monkeypatch):
+    c = TestClient(api.app)
+    h = {"X-Untangle-Session": "steward-test"}
+    c.post("/api/demo/reset", headers=h)
+    q = "減員にキャンセル料をとりますか"
+    c.post("/api/patterns/adopt", headers=h, json={"name": "減員", "situation": "減員の連絡", "points": [
+        {"question": q, "options": ["とる", "とらない"], "chosen": "とる",
+         "examples": [{"ref": 1, "staff": "スタッフA", "text": "2週間前から料金をいただきます。", "decision": "とる"}]}]})
+
+    def fake(rules, items):
+        return {"results": [{"ref": 10, "pattern": "減員", "checks": [{"question_no": 1, "verdict": "決まりどおり"}]},
+                            {"ref": 11, "pattern": "減員", "checks": [{"question_no": 1, "verdict": "決まりと違う"}]}]}
+    monkeypatch.setattr(gemini, "watch_rules", fake)
+    r = c.post("/api/patterns/agent", headers=h, json={
+        "rules": [{"name": "減員", "situation": "減員の連絡", "questions": [q], "decisions": ["とる"]}],
+        "items": [{"ref": 10, "staff": "スタッフB", "text": "2週間前からキャンセル料です。"}, {"ref": 11, "staff": "スタッフC", "text": "料金はいただきません。"}],
+        "board": [{"name": "減員", "state": "watch", "remaining": 9}, {"name": "定員", "state": "decide"}]}).json()
+    tools = [s["tool"] for s in r["steps"]]
+    assert tools[:3] == ["read_board", "check_new_replies", "list_owner_tasks"]     # 決まった手順で巡回（エージェント無しの設定）
+    assert "決まりどおり1・違う1" in r["steps"][1]["summary"]
+    assert "決裁者がやること 2件" in r["steps"][2]["summary"]
+    assert r["status"]["減員"]["remaining"] < 10                                    # 決まりどおりの返事が実例として積まれた

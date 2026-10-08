@@ -155,7 +155,7 @@ async def _no_stale_ui(request: Request, call_next):
 
 # ---- 費用と悪用の歯止め（公開URLなので、誰が叩いても使える額に上限を付ける） ----
 # AI（Gemini・Gemma・エージェント）を呼ぶ受け口。接続元ごと・全体で回数を数える
-AI_PATHS = re.compile(r"^/api/(patterns(/points|/watch)?|themes/propose|intake(/preview|/structured|/approved)?|themes/[^/]+/exits/ai/run|masking/eval)$")
+AI_PATHS = re.compile(r"^/api/(patterns(/points|/watch|/agent)?|themes/propose|intake(/preview|/structured|/approved)?|themes/[^/]+/exits/ai/run|masking/eval)$")
 LIMITS = {
     "ai_ip_min": (int(os.environ.get("UNTANGLE_AI_PER_IP_MIN", "6")), 60),
     "ai_all_min": (int(os.environ.get("UNTANGLE_AI_ALL_MIN", "30")), 60),
@@ -958,27 +958,15 @@ class WatchRequest(BaseModel):
     items: list[PatternItem]
 
 
-@app.post("/api/patterns/watch")
-def pattern_watch(body: WatchRequest):
-    """第3段の見張り: 決まりを作ってから送ったメールが、どのパターンに入り、決まりどおりかを確かめる。"""
+def _watch_record(rules: list[dict], ok: list[dict], dates: dict) -> tuple[list[dict], dict]:
+    """決まりを作った後の返事が決まりどおりかを Gemini に選ばせ、決まりどおりの返事は実例として積む。"""
     from .gemini import watch_rules
-    if not body.rules or not body.items or len(body.items) > PATTERN_MAX_ITEMS:
-        raise HTTPException(400, "決まりとメールを送ってください")
-    rules = [{"name": _plain(r.name, 60), "situation": _plain(r.situation, 200),
-              "points": [{"question": _plain(q, 200), "decision": _plain(d, 200)} for q, d in zip(r.questions, r.decisions)]}
-             for r in body.rules]
-    ok, held = _checked(body.items)
-    if not ok:
-        return {"results": [], "held": held}
-    out = watch_rules(rules, ok)
+    from .models import Decider, Scene, Source
+    out = watch_rules(rules, ok) if ok else {"results": []}
     refs = {it["ref"] for it in ok}
     results = [r for r in out.get("results", []) if r.get("ref") in refs]
-    # 決まりどおりだった返事は、決まりを作った後の実例として積む（信頼が積み上がるほど完了に近づく）
-    from .models import Decider, Scene, Source
     st = S()
     by_ref = {it["ref"]: it for it in ok}
-    dates = {it.ref: it.date for it in body.items}
-    touched = {}
     for r in results:
         rule = next((x for x in rules if x["name"] == r.get("pattern")), None)
         theme = rule and next((t for t in st.themes.values() if t.name == rule["name"] and t.shop == st.shop), None)
@@ -997,12 +985,67 @@ def pattern_watch(body: WatchRequest):
                        situation=text, decision=rule["points"][i]["decision"], source=Source.CONVERSATION,
                        source_ref="送ったメール（見張り）", decider=Decider.STAFF, decider_role=by_ref[r["ref"]]["staff"])
             st.scenes[sc.id] = sc
-            touched[theme.id] = theme
     status = {}
     for theme in {t.id: t for t in st.themes.values() if t.name in {x["name"] for x in rules} and t.shop == st.shop}.values():
         st.promote(theme.id)
         status[theme.name] = _pattern_status(st, theme)
     save()
+    return results, status
+
+
+class BoardTheme(BaseModel):
+    name: str
+    state: str
+    remaining: int | None = None
+
+
+class StewardRequest(BaseModel):
+    rules: list[WatchRule] = []
+    items: list[PatternItem] = []
+    board: list[BoardTheme] = []
+
+
+@app.post("/api/patterns/agent")
+def pattern_agent(body: StewardRequest):
+    """エージェントの巡回: テーマの状態を読み、新しい返事を見張り、決裁者がやることを洗い出してメモを書く。
+    決まりを確定・片付ける道具は持たない（確定は決裁者だけ）。"""
+    from .agent import steward_patrol
+    if len(body.items) > PATTERN_MAX_ITEMS or len(body.board) > 50:
+        raise HTTPException(400, "量が多すぎます")
+    rules = []
+    for r in body.rules:
+        try:
+            rules.append({"name": _plain(r.name, 60), "situation": _plain(r.situation, 200),
+                          "points": [{"question": _plain(q, 200), "decision": _plain(d, 200)} for q, d in zip(r.questions, r.decisions)]})
+        except HTTPException:
+            continue
+    board = []
+    for b in body.board:
+        try:
+            board.append({"name": _plain(b.name, 60), "state": b.state[:20], "remaining": b.remaining})
+        except HTTPException:
+            continue
+    ok, held = _checked(body.items)
+    dates = {it.ref: it.date for it in body.items}
+    run = steward_patrol(board, rules, ok,
+                         watch=lambda: _watch_record(rules, ok, dates) if rules and ok else ([], {}),
+                         plain=lambda t, n: _plain(t, n))
+    return {**run, "held": held}
+
+
+@app.post("/api/patterns/watch")
+def pattern_watch(body: WatchRequest):
+    """第3段の見張り: 決まりを作ってから送ったメールが、どのパターンに入り、決まりどおりかを確かめる。"""
+    from .gemini import watch_rules
+    if not body.rules or not body.items or len(body.items) > PATTERN_MAX_ITEMS:
+        raise HTTPException(400, "決まりとメールを送ってください")
+    rules = [{"name": _plain(r.name, 60), "situation": _plain(r.situation, 200),
+              "points": [{"question": _plain(q, 200), "decision": _plain(d, 200)} for q, d in zip(r.questions, r.decisions)]}
+             for r in body.rules]
+    ok, held = _checked(body.items)
+    if not ok:
+        return {"results": [], "held": held}
+    results, status = _watch_record(rules, ok, {it.ref: it.date for it in body.items})
     return {"results": results, "held": held, "status": status}
 
 

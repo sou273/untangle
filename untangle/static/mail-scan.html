@@ -10,8 +10,6 @@
   .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
   .brandline{display:flex;align-items:baseline;gap:8px}
   .brandline .brand{font-family:var(--display);font-size:1.25rem}
-  .toRules{color:var(--ruri);font-weight:700;text-decoration:none;font-size:.85rem;margin-left:auto}
-  .toRules:hover{text-decoration:underline}
   main.solo{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:24px 60px;display:flex;flex-direction:column;gap:16px}
   .big{font-size:1.05rem;font-weight:700}
   .line{background:var(--warn-soft);border-radius:6px;padding:2px 6px;display:inline-block;margin:2px 0}
@@ -94,6 +92,11 @@
   .tempty{color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:18px;text-align:center}
   .themehead{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
   .themehead h2{font-family:var(--display);margin:0;font-size:1.3rem}
+  .agentcard{border:1px solid var(--ruri);background:var(--ruri-soft);border-radius:12px;padding:10px 14px;margin:8px 0 4px}
+  .agentcard p{margin:6px 0}
+  .agentsteps{margin:4px 0;padding-left:1.4em;font-size:.85rem}
+  .anote{font-size:.8rem;background:var(--ruri-soft);border-radius:8px;padding:6px 8px;line-height:1.5}
+  .anote .who{font-weight:700;color:var(--ruri);margin:0 6px 0 0;font-size:.72rem;display:inline}
   .progress{margin:10px 0;padding:10px 14px;border:1px dashed var(--line,#ccc);border-radius:10px}
   .checks{margin:6px 0;padding-left:1.2em;list-style:none}
   .notice{white-space:pre-wrap;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:10px;padding:10px 14px;font-size:.9rem;font-family:inherit}
@@ -126,7 +129,7 @@
 <body>
 <main class="solo">
   <div class="topbar"><div class="brandline"><span class="brand">Untangle</span><span class="meta">判断の引き継ぎ</span></div>
-    <a class="toRules" href="/rules">条文と出口（団体予約のデモ）›</a></div>
+</div>
   <div><h1>判断のテーマ</h1>
     <p class="sub">スタッフが送ったメールから、ひな形に書き足した判断を見つけ、決裁者が決まりにして、決まりどおりに返せているかを見張ります。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
 
@@ -297,7 +300,7 @@
       try { const p = await gmail("profile"); if (p && p.emailAddress) store.set("untangle-gmail-hint", p.emailAddress); } catch (_) {}
       results = MailScan.analyze(mails, shopSettings()); source = "gmail";
       showDetected();
-      prepared = null; grouped = null; groups = null; focus = null; excluded.clear();
+      prepared = null; grouped = null; groups = null; focus = null; agentLog = null; agentRanFor = null; excluded.clear();
       await render();
     } catch (e) { $("msg").textContent = e.message; }
     $("bar").hidden = true; $("run").disabled = false;
@@ -410,7 +413,7 @@
   // 架空の店で試す: 途中まで進んだ状態（各段にテーマがある）から始める。Gemini は呼ばない
   async function startDemo(fresh) {
     demoWeeks.length = 0;
-    results = MailScan.analyze(window.MAIL_SCAN_DEMO, DEMO_SETTINGS); source = "demo"; showDetected(); prepared = null; grouped = null; groups = null; focus = null; excluded.clear();
+    results = MailScan.analyze(window.MAIL_SCAN_DEMO, DEMO_SETTINGS); source = "demo"; showDetected(); prepared = null; grouped = null; groups = null; focus = null; agentLog = null; agentRanFor = null; excluded.clear();
     $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通で試しています（実在のお客様とは関係ありません）`;
     try {
       if (fresh) { forgetGroups(); await render(); return; }
@@ -577,7 +580,8 @@
       groups: groups.map((g) => ({ name: g.name, situation: g.situation, rule: g.rule, variation: g.variation, question: g.question, ok: g.ok, ids: ids(g.refs, g.keptIds),
         points: g.points && g.points.map((pt) => ({ question: pt.question, options: pt.options.map((o) => ({ label: o.label, ids: ids(o.refs, o.keptIds) })) })),
         answers: g.answers, adopted: g.adopted, status: g.status, deferred: g.deferred, resolved: g.resolved, pending: g.pending,
-        watch: g.watch, watchDone: g.watchDone, retell: g.retell })).filter((g) => g.ids.length || g.adopted),
+        watch: g.watch, watchDone: g.watchDone, retell: g.retell, note: g.note })).filter((g) => g.ids.length || g.adopted),
+      agent: agentLog,
       noJudgment: ids(grouped.no_judgment), held: ids(grouped.held || []) };
     store.set(SAVE_KEY(), data);
     if (source === "gmail" && hasWorkspace()) {
@@ -603,6 +607,7 @@
       .filter((g) => g.refs.length || g.keptIds.length || g.adopted);
     if (!gs.length) return false;
     groups = gs;
+    if (saved.agent) agentLog = saved.agent;
     grouped = { patterns: gs, no_judgment: refs(saved.noJudgment), held: refs(saved.held), restoredAt: saved.savedAt };
     return true;
   }
@@ -762,6 +767,7 @@
       return `<button class="tcard" data-open="${gi}">
         <div class="ttop"><div><h3>${esc(g.name)}</h3><div class="meta">${esc(g.situation || "")}</div></div><span class="chip c-${st}">${esc(d.lbl)}</span></div>
         <div class="steps">${bars}</div><div class="steplbl">${lbls}</div>${meter}<div class="facts">${facts}</div>
+        ${g.note ? `<div class="anote"><span class="who">エージェント</span>${esc(g.note)}</div>` : ""}
         <div class="tnext"><span>${esc(nextText(g, st))}</span><span class="go">開く ›</span></div></button>`;
     }).join("");
     const nj = grouped.no_judgment.length + prepared.noJudgment.length;
@@ -769,6 +775,7 @@
       <p class="meta">上のボタンで状態ごとに絞り込めます。カードを押すと、そのテーマの画面に入ります。判断の無い返事 ${nj}通・自動送信は外しています。${grouped.held && grouped.held.length ? `伏せ残りの疑いで送らなかった文 ${grouped.held.length}通。` : ""}</p>
       ${grouped.restoredAt ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果から続けています。<button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
       ${(() => { const n = newItems().length; return n ? `<div class="row"><button class="btn small" id="groupNew">新しく送ったメール ${n}通をパターンに分ける</button><span class="meta" id="newmsg">どのテーマにも見張りにも入らなかった、前回より後の返事です。新しいテーマは「分け方を確かめる」に入ります。</span></div>` : ""; })()}
+      <div class="agentcard"><div class="spread"><b>エージェントの巡回</b><span class="meta">メールを読み込むたびに自動で</span></div><div id="agentBox">${agentHtmlBody()}</div></div>
       ${buttons}
       ${outside.length ? `<p class="meta">今回読んだ範囲に例の無いテーマが ${outside.length}件あります（決まりを作る前のもの）。読む期間を広げると出ます。</p>` : ""}
       <div class="tlist">${cards || '<div class="tempty">この状態のテーマはありません</div>'}</div></div>`;
@@ -973,29 +980,47 @@
   }
   let watching = false;
   const demoWeeks = [];   // 架空の「次の週」に届いたメール（押すたびに1週ぶん増える）
+  // エージェントの巡回: 読み込むたびに裏で1回。テーマの状態を読み、新しい返事を見張り、決裁者がやることを洗い出してメモを書く
+  let agentLog = null, agentRunning = false, agentRanFor = null;
   async function maybeWatch() {
-    if (watching || !groups) return;
+    if (watching || agentRunning || !groups) return;
     const targets = watchTargets();
-    if (!targets.length) return;
-    watching = true;
+    // 同じ読み込みでは1回だけ。新しい返事が来たときだけ巡回し直す（直後の空の巡回で報告を上書きしない）
+    const key = `${results.length}:${grouped && grouped.restoredAt}`;
+    if (agentRanFor === key && !targets.length) return;
+    agentRanFor = key; watching = targets.length > 0; agentRunning = true;
     const adopted = groups.filter((g) => g.adopted);
+    const live = groups.filter((g) => g.refs.length || g.adopted);
+    if (focus === null && $("agentBox")) $("agentBox").innerHTML = agentHtmlBody();
     try {
       const rules = adopted.map((g) => ({ name: g.name, situation: g.situation || "", questions: g.adopted.results.map((r) => r.question), decisions: g.adopted.results.map((r) => r.decision) }));
-      const res = await fetch("/api/patterns/watch", { method: "POST", headers: headers(), body: JSON.stringify({ rules, items: payload(targets) }) });
+      const board = live.map((g) => ({ name: g.name, state: stateOf(g), remaining: g.status ? g.status.remaining : null }));
+      const res = await fetch("/api/patterns/agent", { method: "POST", headers: headers(), body: JSON.stringify({ rules, items: payload(targets), board }) });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.detail || `見張りがうまくいきませんでした（${res.status}）`);
+      if (!res.ok) throw new Error(body.detail || `巡回がうまくいきませんでした（${res.status}）`);
       for (const a of adopted) if (body.status && body.status[a.name]) { a.status = body.status[a.name]; a.manual = null; }
-      const byRef = new Map(body.results.map((x) => [x.ref, x]));
+      const byRef = new Map((body.results || []).map((x) => [x.ref, x]));
       for (const it of targets) {
         const x = byRef.get(it.ref);
         const g = x && adopted.find((a) => a.name === x.pattern);
         for (const a of adopted) a.watch = a.watch || {};
-        (g || adopted[0]).watch[it.r.id] = g ? { checks: x.checks } : { none: true };
+        if (adopted.length) (g || adopted[0]).watch[it.r.id] = g ? { checks: x.checks } : { none: true };
       }
+      for (const g of groups) if (body.notes && body.notes[g.name]) g.note = body.notes[g.name];
+      agentLog = { at: Date.now(), steps: body.steps || [], report: body.report || "", replies: targets.length };
       saveGroups();
-    } catch (e) { const m = $("watchmsg"); if (m) m.textContent = e.message; }
-    watching = false;
+    } catch (e) { agentLog = { at: Date.now(), steps: [], report: e.message, error: true }; }
+    watching = false; agentRunning = false;
     const y = window.scrollY; await render(); window.scrollTo(0, y);
+  }
+  const TOOL_LABEL = { read_board: "テーマの状態を読む", check_new_replies: "新しい返事を見張る", list_owner_tasks: "やることを洗い出す", write_note: "メモを書く" };
+  function agentHtmlBody() {
+    if (agentRunning) return `<p class="meta">巡回しています…（テーマの状態を読み、新しい返事を見張り、決裁者のやることを洗い出します）</p>`;
+    if (!agentLog) return `<p class="meta">まだ巡回していません。</p>`;
+    const steps = agentLog.steps.map((st) => `<li><b>${esc(TOOL_LABEL[st.tool] || st.tool)}</b> <span class="meta">${esc(st.summary)}</span></li>`).join("");
+    return `<p>${esc(agentLog.report || "（報告はありません）")}</p>
+      ${steps ? `<details><summary class="meta">使った道具（${agentLog.steps.length}回）</summary><ol class="agentsteps">${steps}</ol></details>` : ""}
+      <p class="meta">${new Date(agentLog.at).toLocaleString("ja-JP")}。エージェントが持つのは、読む・見張る・洗い出す・メモを書く道具だけです。決まりを確定させたり片付けたりはできません（決めるのは決裁者）。</p>`;
   }
   async function watchHtml(gi, g) {
     const entries = Object.entries(g.watch || {}).filter(([, w]) => !w.none);
