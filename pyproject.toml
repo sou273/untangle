@@ -1,0 +1,28 @@
+[project]
+name = "untangle"
+version = "0.1.0"
+description = "決裁者の判断を、テスト済みの規程として引き出して共有知にする"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.7",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "google-genai>=1.0",
+  "google-adk==2.10.0",
+  "opentelemetry-api==1.42.1",
+  "opentelemetry-sdk==1.42.1",
+  "google-api-core>=2.20,<2.39",
+  "google-cloud-firestore>=2.20",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+untangle = ["static/*", "data/*.json"]
+
+[tool.setuptools.packages.find]
+include = ["untangle*"]

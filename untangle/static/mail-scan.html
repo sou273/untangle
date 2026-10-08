@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Untangle</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .brandline{display:flex;align-items:baseline;gap:8px}
+  .brandline .brand{font-family:var(--display);font-size:1.25rem}
+  .wsbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;flex:1;min-width:0}
+  .toRules{color:var(--ruri);font-weight:700;text-decoration:none;font-size:.85rem}
+  .toRules:hover{text-decoration:underline}
+  main.solo{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:24px 60px;display:flex;flex-direction:column;gap:16px}
+  .big{font-size:1.05rem;font-weight:700}
+  .line{background:var(--warn-soft);border-radius:6px;padding:2px 6px;display:inline-block;margin:2px 0}
+  td{font-size:.84rem}
+  .pattern{border-top:1px solid var(--line,#ddd);padding:14px 0}
+  .pattern.done{opacity:.75}
+  /* 状態の流れ: 矢印でつながった5つの段（横）。狭い幅では縦に並べて下向きの矢印でつなぐ */
+  .flow{display:flex;gap:12px;align-items:stretch;margin:10px 0 16px}
+  .fall{all:unset;cursor:pointer;flex:none;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;min-width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .fall .n{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+  .fall .lbl{font-size:.8rem;font-weight:700}
+  .fall[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .pipe{flex:1;min-width:0;display:grid;gap:4px}
+  .band{display:grid;grid-template-columns:3fr 1fr 1fr;gap:6px;font-size:.7rem;font-weight:700}
+  .band span{border-top:2px solid;padding-top:2px}
+  .b-you{color:var(--ruri);border-color:var(--ruri)}
+  .b-wait{color:var(--ok);border-color:var(--ok)}
+  .segs{display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+  .seg{all:unset;cursor:pointer;position:relative;display:flex;flex-direction:column;gap:0;padding:10px 22px 10px 26px;min-width:0;
+    clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);margin-right:-10px}
+  .seg:first-child{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);padding-left:14px;border-radius:10px 0 0 10px}
+  .seg:last-child{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,14px 50%);margin-right:0;border-radius:0 10px 10px 0}
+  .seg .n{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+  .seg .lbl{font-weight:700;font-size:.86rem;line-height:1.35}
+  .seg .sub{font-size:.68rem;color:var(--muted);line-height:1.35}
+  .s-check,.s-decide,.s-fix{background:var(--ruri-soft)}
+  .s-check .n,.s-decide .n,.s-fix .n{color:var(--ruri)}
+  .s-watch{background:var(--ok-soft)}
+  .s-done{background:var(--line)}
+  .s-watch .n,.s-done .n{color:var(--ok)}
+  .seg:hover{filter:brightness(.96)}
+  .seg[aria-pressed="true"]{background:var(--ruri);color:var(--ruri-ink)}
+  .seg[aria-pressed="true"] .n,.seg[aria-pressed="true"] .sub{color:var(--ruri-ink)}
+  .seg:focus-visible,.fall:focus-visible,.seg-later:focus-visible,.tcard:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .branch{display:grid;grid-template-columns:1fr 4fr;align-items:center}
+  .branch .fork{grid-column:1;justify-self:end;color:var(--muted);padding-right:4px;transform:translateX(40%)}
+  .seg-later{all:unset;cursor:pointer;justify-self:start;font-size:.8rem;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--sunk);border:1px dashed var(--line);color:var(--muted)}
+  .seg-later .n{font-variant-numeric:tabular-nums;color:var(--ink)}
+  .seg-later .sub{font-weight:400;font-size:.7rem}
+  .seg-later[aria-pressed="true"]{background:var(--muted);color:var(--surface);border-style:solid}
+  .seg-later[aria-pressed="true"] .n{color:var(--surface)}
+  .tcard:hover{border-color:var(--ruri)}
+  @media (max-width:640px){
+    .flow{flex-direction:column}
+    .fall{flex-direction:row;gap:8px;justify-content:flex-start}
+    .band{display:none}
+    .segs{grid-template-columns:1fr;gap:0}
+    .seg,.seg:first-child,.seg:last-child{clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),50% 100%,0 calc(100% - 10px));margin:0 0 -6px;padding:8px 14px 16px;border-radius:10px 10px 0 0}
+    .seg:last-child{clip-path:none;margin:0;padding-bottom:8px;border-radius:0 0 10px 10px}
+    .s-check .lbl::after,.s-decide .lbl::after,.s-fix .lbl::after{content:"  あなたの番";font-size:.68rem;color:var(--ruri)}
+    .seg[aria-pressed="true"] .lbl::after{color:var(--ruri-ink)}
+    .branch{grid-template-columns:auto 1fr;gap:6px;margin-top:6px}
+    .branch .fork{transform:none}
+  }
+  .tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+  .tcard{all:unset;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .ttop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .tcard h3{font-family:var(--display);font-size:1.05rem;margin:0;text-wrap:balance}
+  .chip{flex:none;font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+  .c-check,.c-decide{background:var(--ruri-soft);color:var(--ruri)}
+  .c-fix{background:var(--warn-soft);color:var(--warn)}
+  .c-watch{background:var(--ok-soft);color:var(--ok)}
+  .c-done{background:var(--ok);color:#fff}
+  .c-later{background:var(--sunk);color:var(--muted)}
+  .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+  .steps span{height:6px;border-radius:999px;background:var(--line)}
+  .steps span.done{background:var(--ok)}
+  .steps span.now{background:var(--ruri)}
+  .steps span.now.fix{background:var(--warn)}
+  .steps span.now.later{background:var(--muted)}
+  .steplbl{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:.66rem;color:var(--muted);margin-top:-4px}
+  .steplbl b{color:var(--ink)}
+  .meter{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .mbar{flex:1;height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .mbar i{display:block;height:100%;background:var(--ok)}
+  .meter b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .facts{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:.74rem;color:var(--muted)}
+  .tnext{font-size:.84rem;border-top:1px dashed var(--line);padding-top:8px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .tnext .go{flex:none;font-weight:700;color:var(--ruri)}
+  .tempty{color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:18px;text-align:center}
+  .themehead{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .themehead h2{font-family:var(--display);margin:0;font-size:1.3rem}
+  .progress{margin:10px 0;padding:10px 14px;border:1px dashed var(--line,#ccc);border-radius:10px}
+  .checks{margin:6px 0;padding-left:1.2em;list-style:none}
+  .notice{white-space:pre-wrap;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:10px;padding:10px 14px;font-size:.9rem;font-family:inherit}
+  .point{margin:12px 0;padding:10px 14px;border:1px solid var(--line,#ddd);border-radius:10px}
+  .opt{display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer}
+  .opt input{width:auto;margin-top:4px}
+  .optex{margin:0 0 6px 26px}
+  .point input.other,.point input.reason{margin-top:6px}
+  .adopted{margin-top:10px;padding:10px 14px;background:var(--ok-soft,#eaf6ec);border-radius:10px;line-height:1.7}
+  .example{border:1px solid var(--line,#ddd);border-radius:10px;padding:10px 14px;margin:8px 0;background:var(--surface,#fff)}
+  .who{font-weight:700;font-size:.85rem;margin-top:10px}
+  .quote{border-left:3px solid var(--line,#ccc);padding:4px 10px;color:var(--muted,#555);font-size:.9rem}
+  .full{padding:4px 10px;font-size:.9rem;line-height:1.7}
+  .full .hit{background:var(--warn-soft);border-left:3px solid #d9a441;padding-left:6px;margin-left:-9px}
+  .verdict{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line,#ddd)}
+  .pattern h3{margin:0;font-size:1.05rem}
+  .pattern p{margin:8px 0}
+  .mail{border-left:3px solid var(--line,#ddd);padding:6px 10px;margin:10px 0}
+  .todo{background:var(--warn-soft);border-radius:10px;padding:12px 16px;margin:8px 0 12px}
+  .todo ol{margin:6px 0 0;padding-left:1.4em}
+  .todo li{margin:4px 0}
+  .checklist{max-height:60vh;overflow:auto;border:1px solid var(--line,#ddd);border-radius:10px;padding:4px 12px}
+  .sample.off{opacity:.4;text-decoration:line-through}
+  .btn.small{padding:2px 10px;font-size:.8rem}
+  .sample{border-left:3px solid var(--line,#ddd);padding:4px 10px;margin:8px 0;font-size:.9rem}
+  .keep{margin:8px 0}
+  .quoted { margin-top: 8px; font-size: 13px; color: var(--muted, #666); } .quoted summary { cursor: pointer; }
+</style>
+</head>
+<body>
+<main class="solo">
+  <div class="topbar"><div class="brandline"><span class="brand">Untangle</span><span class="meta">判断の引き継ぎ</span></div>
+    <div class="wsbox" id="wsbox"></div>
+    <a class="toRules" href="/rules">条文と出口（団体予約のデモ）›</a></div>
+  <div><h1>判断のテーマ</h1>
+    <p class="sub">スタッフが送ったメールから、ひな形に書き足した判断を見つけ、決裁者が決まりにして、決まりどおりに返せているかを見張ります。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
+
+  <div class="card">
+    <h2>1. Gmailにログイン（読み取りだけ）</h2>
+    <div class="row"><button class="btn" id="login">Googleでログイン</button><span class="meta" id="who"></span></div>
+    <p class="meta">「このアプリは確認されていません」と出たら、自分で作ったアプリなので「続行」を押してください。権限は読み取りだけで、送信・削除はできません。</p>
+  </div>
+
+  <div class="card">
+    <h2>2. 読むメール</h2>
+    <label class="meta" for="q">Gmailの検索条件</label>
+    <input id="q" value="in:sent newer_than:90d">
+    <label class="meta" for="limit">読む通数（新しいほうから）</label>
+    <select id="limit"><option>200</option><option selected>500</option><option>1000</option><option>2000</option></select>
+    <details class="keep"><summary class="meta">伏せない言葉（お店の名前・地名など）</summary>
+      <p class="meta">名前・会社名・地名と、辞書に無い言葉は全部伏せます。お店の自動送信メールの決まり文句に出てくる言葉は伏せません。ほかに伏せたくない言葉があれば、読点（、）で区切って書いてください。</p>
+      <input id="keepWords" placeholder="例: 店名、地名"></details>
+    <details class="keep"><summary class="meta">このお店の設定（署名・自動送信）</summary>
+      <p class="meta">署名の店名の行（例: ○○工房）と社内のメールアドレスは、読んだメールから自動で見つけます。違っていたら書いてください。自動で送っている確定メールの署名（例: 予約デスク）は、自動では見分けられないので書いてください。</p>
+      <label class="meta" for="autoSigners">自動送信の署名（読点で区切って複数）</label><input id="autoSigners" placeholder="例: 予約デスク">
+      <label class="meta" for="shopLine">署名の店名の行（空なら自動）</label><input id="shopLine" placeholder="自動で見つけます">
+      <label class="meta" for="internalDomains">社内のメールアドレスのドメイン（空なら差出人から自動）</label><input id="internalDomains" placeholder="例: @example.co.jp">
+      <p class="meta" id="detected"></p></details>
+    <p class="meta" id="dict">辞書を読み込んでいます（初めてのときは十数秒かかります）…</p>
+    <div class="row"><button class="btn" id="run" disabled>読んで分ける</button><button class="btn ghost" id="demo">架空の店で試す（途中まで進んだ状態）</button><button class="btn ghost small" id="demoFresh">架空のメールを最初から分ける</button><span class="meta" id="msg"></span></div>
+    <div class="bar" id="bar" hidden><i id="fill"></i></div>
+  </div>
+
+  <div id="out"></div>
+</main>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="/static/mail-scan-core.js"></script>
+<script src="/static/local-ai.js"></script>
+<script src="/static/mail-scan-demo.js"></script>
+
+<script>
+(() => {
+  const CLIENT_ID = "63500257813-1i3d14ab76voivf13uh2gv7cue439dpr.apps.googleusercontent.com";
+  const SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let token = null, client = null, results = null, hideNames = true;
+
+  // ログインの保持: 約1時間で切れる鍵だけを、このブラウザの中に期限つきで残す（サーバーには送らない）。
+  // 長く使える鍵は受け取らない（サーバーで預かる作りになり、「サーバーを通さない」に反するため）
+  const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
+  const saved = store.get("untangle-gmail-token");
+  if (saved && saved.exp > Date.now() + 60000) { token = saved.token; ready("ログインしています（このブラウザに期限つきで保持）"); }
+  function ready(text) { $("who").textContent = text; $("run").disabled = false; $("login").textContent = "ログインし直す"; }
+
+  let pending = null;
+  function signIn(silent) {
+    if (!window.google || !google.accounts) return Promise.reject(new Error("Googleのログイン部品を読み込み中です。少し待ってもう一度押してください"));
+    return new Promise((resolve, reject) => {
+      pending = { resolve, reject };
+      client = client || google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPE,
+        callback: (r) => {
+          const p = pending; pending = null;
+          if (r.error) { p && p.reject(new Error(`ログインできませんでした（${r.error}）`)); return; }
+          token = r.access_token;
+          store.set("untangle-gmail-token", { token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000 });
+          ready("ログインしました"); p && p.resolve();
+        },
+        error_callback: (e) => { const p = pending; pending = null; p && p.reject(new Error(`ログインできませんでした（${e.type || "閉じられました"}）`)); },
+      });
+      // 前回のアカウントを覚えておき、同意画面やアカウント選択を出さずに入り直す
+      const hint = store.get("untangle-gmail-hint") || undefined;
+      client.requestAccessToken({ prompt: silent ? "" : (store.get("untangle-gmail-consented") ? "" : "consent"), login_hint: hint });
+    });
+  }
+
+  $("login").addEventListener("click", async () => {
+    try { await signIn(false); store.set("untangle-gmail-consented", true); }
+    catch (e) { $("who").textContent = e.message; }
+  });
+
+  // 1回ごとに時間の上限を付け、Gmail側の「少し待って」（429・5xx）には間を空けて再試行する
+  async function gmail(path, tries = 5) {
+    let wait = 1000;
+    for (let i = 0; ; i++) {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 20000);
+      try {
+        const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: ctl.signal });
+        if (r.status === 401) {
+          if (i === 0) { await signIn(true).catch(() => {}); continue; }   // 期限切れなら入り直して続ける
+          throw Object.assign(new Error("ログインの期限が切れました。もう一度ログインしてください"), { fatal: true });
+        }
+        if (r.ok) return r.json();
+        if (!(r.status === 429 || r.status >= 500) || i >= tries) throw new Error(`Gmailの読み取りに失敗しました（${r.status}）`);
+      } catch (e) {
+        if (e.fatal || i >= tries) throw e;
+      } finally { clearTimeout(timer); }
+      await new Promise((ok) => setTimeout(ok, wait)); wait = Math.min(wait * 2, 15000);
+    }
+  }
+
+  function decodePart(data, charset) {
+    const b = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+    const bytes = Uint8Array.from(b, (c) => c.charCodeAt(0));
+    try { return new TextDecoder((charset || "utf-8").toLowerCase()).decode(bytes); } catch (_) { return new TextDecoder("utf-8").decode(bytes); }
+  }
+  function plainText(payload) {
+    const stack = [payload];
+    while (stack.length) {
+      const p = stack.shift();
+      if (p.mimeType === "text/plain" && p.body && p.body.data) {
+        const ct = (p.headers || []).find((h) => h.name.toLowerCase() === "content-type");
+        const cs = ct && /charset="?([^";]+)/i.exec(ct.value);
+        return decodePart(p.body.data, cs && cs[1]);
+      }
+      (p.parts || []).forEach((x) => stack.push(x));
+    }
+    return "";
+  }
+  const header = (m, name) => ((m.payload.headers || []).find((h) => h.name.toLowerCase() === name.toLowerCase()) || {}).value || "";
+
+  async function listIds(q, max) {
+    const ids = []; let page = "";
+    do {
+      const r = await gmail(`messages?q=${encodeURIComponent(q)}&maxResults=500${page ? `&pageToken=${page}` : ""}`);
+      (r.messages || []).forEach((m) => ids.push(m.id));
+      page = r.nextPageToken || "";
+    } while (page && ids.length < max);
+    return ids.slice(0, max);
+  }
+
+  $("run").addEventListener("click", async () => {
+    $("run").disabled = true; $("out").innerHTML = ""; $("bar").hidden = false; $("fill").style.width = "0%";
+    try {
+      $("msg").textContent = "メールの一覧を取っています…";
+      const ids = await listIds($("q").value, Number($("limit").value));
+      const mails = []; let done = 0, skipped = 0, fatal = null;
+      const queue = [...ids];
+      const FIELDS = "id,internalDate,payload(mimeType,headers,body/data,parts(mimeType,headers,body/data,parts(mimeType,headers,body/data,parts(mimeType,headers,body/data))))";
+      async function worker() {
+        while (queue.length && !fatal) {
+          const id = queue.shift();
+          try {
+            const m = await gmail(`messages/${id}?format=full&fields=${encodeURIComponent(FIELDS)}`);
+            mails.push({ id, subject: header(m, "Subject"), from: header(m, "From"), to: header(m, "To"), date: new Date(Number(m.internalDate)), body: plainText(m.payload) });
+          } catch (e) {
+            if (e.fatal) { fatal = e; break; }
+            skipped++;   // 読めない1通は飛ばして数えるだけ（全体は止めない）
+          }
+          done++; $("fill").style.width = `${Math.round((done / ids.length) * 100)}%`;
+          $("msg").textContent = `${done} / ${ids.length} 通を読みました${skipped ? `（読めなかった ${skipped} 通は飛ばしました）` : ""}`;
+        }
+      }
+      await Promise.all(Array.from({ length: 4 }, worker));
+      if (fatal) throw fatal;
+      $("msg").textContent = `${mails.length} 通を読み、このブラウザの中で分けました${skipped ? `（読めなかった ${skipped} 通は除いています）` : ""}`;
+      store.set("untangle-mail-query", $("q").value);
+      try { const p = await gmail("profile"); if (p && p.emailAddress) store.set("untangle-gmail-hint", p.emailAddress); } catch (_) {}
+      results = MailScan.analyze(mails, shopSettings()); source = "gmail";
+      showDetected();
+      prepared = null; grouped = null; groups = null; focus = null; excluded.clear();
+      await render();
+    } catch (e) { $("msg").textContent = e.message; }
+    $("bar").hidden = true; $("run").disabled = false;
+  });
+
+  // 伏せ方は送る文も画面の表示も同じ: 決まった規則 → スタッフ名 → めったに出ない固有名詞 → 「様」の前
+  // 日本語の辞書（kuromoji）は裏の作業場（Web Worker）で動かす。ページと同じ所で動かすと辞書の展開でページが固まる。
+  // 読み込むのは辞書だけで、メールの中身は作業場とページの間だけでやり取りする
+  let workerP = null, seq = 0, dictReady = null;
+  const waiting = new Map();
+  function startWorker() {
+    // 作業場のファイルを読み、その場で組み立てて立てる（ファイルの URL から直接立てると本番で辞書が返ってこないことがあった）
+    return (workerP ||= fetch("/static/kuromoji-worker.js").then((r) => r.text()).then((code) => {
+      const w = new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })), { name: location.origin });
+      w.onmessage = (e) => { const x = waiting.get(e.data.id); if (!x) return; waiting.delete(e.data.id); e.data.error ? x.ng(new Error(e.data.error)) : x.ok(e.data.result); };
+      w.onerror = () => { for (const x of waiting.values()) x.ng(new Error("辞書の読み込みに失敗しました")); waiting.clear(); workerP = null; dictReady = null; };
+      return w;
+    }));
+  }
+  async function call(op, payload = {}) {
+    const w = await startWorker();
+    const id = ++seq;
+    return new Promise((ok, ng) => {
+      const timer = setTimeout(() => { waiting.delete(id); ng(new Error("辞書の読み込みが終わりませんでした")); }, op === "init" ? 90000 : 120000);
+      waiting.set(id, { ok: (v) => { clearTimeout(timer); ok(v); }, ng: (e) => { clearTimeout(timer); ng(e); } });
+      w.postMessage({ id, op, ...payload });
+    });
+  }
+  const loadTokenizer = () => (dictReady ||= call("init").catch((e) => { dictReady = null; throw e; }));
+  loadTokenizer().then(() => { $("dict").textContent = "辞書の準備ができました。"; },
+    () => { $("dict").textContent = "辞書を読み込めませんでした。伏せきれないので、メールを分けることはできません。ページを開き直してください。"; });
+  // ---- 作業場（実データの置き場）。ID を知っているブラウザだけが開ける。#ws-<ID> のリンクで別の端末でも開ける ----
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  const lsSet = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
+  if (location.hash.startsWith("#ws-")) { lsSet("untangle-ws", location.hash.slice(4)); lsSet("untangle-mode", "ws"); history.replaceState(null, "", location.pathname); }
+  async function renderWs() {
+    const box = $("wsbox"), ws = lsGet("untangle-ws");
+    if (ws && lsGet("untangle-mode") !== "demo") {
+      let shop = "";
+      try { const r = await fetch("/api/workspace", { headers: { "X-Untangle-Workspace": ws } }); const b = await r.json(); shop = b.shop || ""; } catch (_) {}
+      box.innerHTML = `<span class="meta">作業場</span> <b>${esc(shop || "（読み込めませんでした）")}</b>
+        <button class="btn ghost small" id="wsCopy">別の端末で開くリンクをコピー</button><span class="meta" id="wsMsg"></span>`;
+      $("wsCopy").addEventListener("click", async () => {
+        const url = `${location.origin}/#ws-${ws}`;
+        try { await navigator.clipboard.writeText(url); $("wsMsg").textContent = "コピーしました。このリンクを知っている人だけが開けます"; }
+        catch (_) { $("wsMsg").textContent = url; }
+      });
+    } else {
+      box.innerHTML = `<span class="meta">作業場がありません（決まりを残すには要ります）</span>
+        <input id="wsShop" placeholder="店の名前" style="max-width:180px"><button class="btn small" id="wsMake">作業場を作る</button><span class="meta" id="wsMsg"></span>`;
+      $("wsMake").addEventListener("click", async () => {
+        const shop = $("wsShop").value.trim();
+        if (!shop) { $("wsMsg").textContent = "店の名前を書いてください"; return; }
+        try {
+          const r = await fetch("/api/workspaces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shop }) });
+          const b = await r.json();
+          if (!r.ok) throw new Error(b.detail || `作れませんでした（${r.status}）`);
+          lsSet("untangle-ws", b.id); lsSet("untangle-mode", "ws"); renderWs();
+        } catch (e) { $("wsMsg").textContent = e.message; }
+      });
+    }
+  }
+  renderWs();
+
+  // このお店の設定（このブラウザに残す）。空の項目はメールから自動で見つける
+  const DEMO_SETTINGS = { autoSigners: ["予約デスク"] };
+  const list = (v) => String(v || "").split(/[、,，\s]+/).map((x) => x.trim()).filter(Boolean);
+  function shopSettings() {
+    const st = store.get("untangle-mail-settings") || {};
+    return { autoSigners: list(st.autoSigners), shopLine: (st.shopLine || "").trim(), internal: list(st.internal).map((d) => (d.startsWith("@") ? d : "@" + d).toLowerCase()) };
+  }
+  {
+    const st = store.get("untangle-mail-settings") || {};
+    $("autoSigners").value = st.autoSigners || ""; $("shopLine").value = st.shopLine || ""; $("internalDomains").value = st.internal || "";
+    const savedQ = store.get("untangle-mail-query"); if (savedQ) $("q").value = savedQ;
+    for (const [id, key] of [["autoSigners", "autoSigners"], ["shopLine", "shopLine"], ["internalDomains", "internal"]])
+      $(id).addEventListener("change", () => { const cur = store.get("untangle-mail-settings") || {}; cur[key] = $(id).value; store.set("untangle-mail-settings", cur); });
+  }
+  function showDetected() {
+    if (!results) return;
+    $("detected").textContent = `見つけた署名の店名の行: ${results.shopLine || "（見つかりませんでした。上に書いてください）"}／社内とみなすドメイン: ${(results.internal || []).join("、") || "なし"}`;
+  }
+
+  const keepWords = () => (store.get("untangle-keep-words") || "").split(/[、,，\s]+/).map((w) => w.trim()).filter(Boolean);
+  $("keepWords").value = keepWords().join("、");
+  $("keepWords").addEventListener("change", (e) => { store.set("untangle-keep-words", e.target.value); maskCtx = null; properCache.clear(); if (results) { prepared = null; render(); } });
+
+  let maskCtx = null;
+  const properCache = new Map();   // 決まった規則で伏せた後の行 → 辞書でも伏せた行
+  async function ctx() {
+    if (maskCtx && maskCtx.results === results) return maskCtx;
+    await loadTokenizer();
+    const rare = MailScan.rareNames(results.map((r) => [...r.lines, ...(r.quoted || []), r.family]));
+    const staff = MailScan.staffNames(results).map((n) => ({ surface: n, replacement: "スタッフ" }));
+    // お店の自動送信メールの決まり文句（3通以上に同じ形で出る行）に出てくる固有名詞は伏せない
+    const autos = results.filter((r) => r.auto), count = new Map();
+    for (const r of autos) for (const sk of new Set(r.lines.slice(MailScan.addresseeBlock(r.lines)).map(MailScan.skeleton))) count.set(sk, (count.get(sk) || 0) + 1);
+    const templateLines = [...new Set(autos.flatMap((r) => r.lines.slice(MailScan.addresseeBlock(r.lines)).filter((l) => (count.get(MailScan.skeleton(l)) || 0) >= 3)))];
+    const vocab = templateLines.length ? await call("vocab", { lines: templateLines }) : [];
+    const keep = [...new Set([...vocab, ...keepWords()])];
+    // 宛名の欄に出てきた名前（様の付かない「森から」も伏せるため）と英字の名前
+    const blockLines = results.flatMap((r) => r.lines.slice(0, MailScan.addresseeBlock(r.lines)));
+    const names = blockLines.length ? await call("names", { lines: blockLines, keep }) : [];
+    const latin = MailScan.addresseeLatinNames(results);
+    properCache.clear();
+    return (maskCtx = { results, rare, staff, keep, names, latin });
+  }
+  // 何行かをまとめて伏せる（辞書の作業場へは1回で頼む）
+  async function maskMany(lines) {
+    const c = await ctx();
+    const ruled = [];
+    for (const l of lines) ruled.push((await LocalAI.mask(l, c.staff, false)).masked);
+    const todo = [...new Set(ruled.filter((t) => t && !properCache.has(t)))];
+    if (todo.length) {
+      const done = await call("mask", { texts: todo, keep: c.keep, names: c.names });
+      todo.forEach((t, i) => properCache.set(t, done[i]));
+    }
+    return ruled.map((t) => (t ? MailScan.maskHonorifics(MailScan.maskRare(MailScan.maskLatinNames(MailScan.maskAddress(properCache.get(t)), c.latin), c.rare)) : null));
+  }
+  const maskText = async (line) => (await maskMany([line]))[0];
+  async function show(line) {
+    if (!hideNames) return esc(line);
+    const t = await maskText(line);
+    return esc(t ?? "（取り込まない内容）").replace(/［([^］]*)］/g, '<span class="m">$1</span>');
+  }
+  const staffLabel = (name) => {
+    if (!hideNames) return name || "不明";
+    const label = prepared && Object.entries(prepared.staffNames || {}).find(([, n]) => n === name);
+    return label ? label[0] : (name ? "スタッフ" : "不明");
+  };
+
+  // 判断の無い返事（受け付けた・お礼・謝罪だけ）の行。まとまりに分ける前にブラウザの中で外す
+  const ACK = /(承知(いた)?しました|承りました|ありがとうございま(す|した)|よろしくお願い(いた|申し上げ)?(します|ます)|お待ちしております|失礼いたしました|申し訳ございません(でした)?|恐れ入ります|お世話になっております|ご確認(のほど|ください|くださいませ)|お気をつけて|ご安全に|お大事に|Thank you|Kind regards|Best regards|look forward|Sincerely|Sokichi?)/i;
+  const isAck = (l) => l.length <= 45 && ACK.test(l);
+  let prepared = null, grouped = null, source = "gmail";
+  const CHECK_MODE = new URLSearchParams(location.search).has("check");
+  const excluded = new Set();
+
+  // 架空の店で試す: 途中まで進んだ状態（各段にテーマがある）から始める。Gemini は呼ばない
+  async function startDemo(fresh) {
+    demoWeeks.length = 0;
+    results = MailScan.analyze(window.MAIL_SCAN_DEMO, DEMO_SETTINGS); source = "demo"; showDetected(); prepared = null; grouped = null; groups = null; focus = null; excluded.clear();
+    $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通で試しています（実在のお客様とは関係ありません）`;
+    try {
+      if (fresh) { forgetGroups(); await render(); return; }
+      store.set(SAVE_KEY(), { savedAt: Date.now() - 86400000, groups: window.MAIL_SCAN_DEMO_SEED, noJudgment: [], held: [] });
+      await prepare(); await restoreGroups();
+      $("msg").textContent = "架空の店の、途中まで進んだ状態を用意しています…";
+      for (const g of groups) if (g.seed && g.seed.adopt) await seedAdopt(g);
+      saveGroups();
+      $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通・途中まで進んだ状態です（実在のお客様とは関係ありません）。「最初から分ける」では Gemini で分けるところから試せます`;
+      await render();
+    } catch (e) { $("msg").textContent = e.message; }
+  }
+  // 決まりを作り直す（サーバーの試しの場に。Gemini は呼ばない）。seed.resolve なら違う答え方を「これからは決まりどおり」で片付ける
+  async function seedAdopt(g) {
+    const post = async (path, body) => {
+      const r = await fetch(path, { method: "POST", headers: headers(), body: JSON.stringify(body) });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(b.detail || `用意できませんでした（${r.status}）`);
+      return b;
+    };
+    const points = g.points.map((pt, i) => {
+      const a = (g.answers || {})[i] || {};
+      return { question: pt.question, options: pt.options.map((o) => o.label), chosen: pt.options[Number(a.choice)].label, reason: a.reason || "",
+        examples: pt.options.flatMap((o) => itemsOf(o.refs).map((it) => ({ ref: it.ref, staff: it.staff, text: it.text, decision: o.label, date: isoDay(it.r.date) }))) };
+    });
+    const body = await post("/api/patterns/adopt", { name: g.name, situation: g.situation || "", points });
+    for (const r of body.results || []) r.differ_items = (r.differ_items || []).map((d) => ({ ...d, id: (itemsOf([d.ref])[0] || { r: {} }).r.id })).filter((d) => d.id);
+    g.adopted = { ...body, at: Date.now() - 86400000 }; g.status = body.status; g.resolved = {}; g.pending = {};
+    if (g.seed.resolve) for (const [pi, r] of (body.results || []).entries()) {
+      if (!(r.differ_items || []).length) continue;
+      const items = r.differ_items.map((d) => itemById(d.id)).filter(Boolean).map((it) => ({ ref: it.ref, staff: it.staff, text: it.text, choice: "follow" }));
+      const done = await post("/api/patterns/resolve", { name: g.name, question: r.question, items });
+      g.resolved[pi] = done; g.status = done.status;
+      for (const d of r.differ_items) g.pending[`${groups.indexOf(g)}-${pi}-${d.id}`] = { choice: "follow" };
+    }
+  }
+  $("demo").addEventListener("click", () => startDemo(false));
+  $("demoFresh").addEventListener("click", () => startDemo(true));
+
+  async function prepare() {
+    const picks = results.filter((r) => !r.auto && (r.kind === "書き足し" || r.kind === "返信での判断" || r.kind === "別の型"));
+    const staff = new Map();
+    const label = (name) => {
+      if (!name) return "不明";
+      if (!staff.has(name)) staff.set(name, "スタッフ" + String.fromCharCode(65 + staff.size));
+      return staff.get(name);
+    };
+    const items = [], noJudgment = [], unsure = [];
+    // 送る行と件名をまとめて伏せる（辞書の作業場へは1回で頼む）
+    const want = picks.flatMap((r) => [...r.unique.filter((l) => !isAck(l)).slice(0, 12), r.family]);
+    const maskedAll = await maskMany(want);
+    const table = new Map(want.map((l, i) => [l, maskedAll[i]]));
+    const maskLine = async (l) => {
+      const t = table.has(l) ? table.get(l) : await maskText(l);
+      return t && !MailScan.suspicious(t) ? t : null;   // 伏せきれたか確信が持てない行は送らない
+    };
+    for (const [i, r] of picks.entries()) {
+      const lines = r.unique.filter((l) => !isAck(l)).slice(0, 12);
+      if (!lines.length) { noJudgment.push(r); continue; }
+      const masked = [];
+      let dropped = 0;
+      for (const l of lines) { const t = await maskLine(l); t ? masked.push(t) : dropped++; }
+      if (dropped) unsure.push({ r, dropped });
+      if (!masked.length) { if (!dropped) noJudgment.push(r); continue; }
+      const subj = (await maskLine(r.family)) || "（件名は伏せきれないため省略）";
+      items.push({ ref: i + 1, staff: label(r.signer), subject: subj, text: masked.join("\n"), r });
+    }
+    prepared = { items, noJudgment, unsure, staffNames: Object.fromEntries([...staff].map(([k, v]) => [v, k])) };
+  }
+
+  async function render() {
+    if (!prepared) { await prepare(); if (!grouped) await restoreGroups(); }
+    const { items, noJudgment } = prepared;
+    let top = "";
+    if (!grouped && !CHECK_MODE) {
+      top = `<div class="card"><h2>3. パターンに分けています</h2>
+        <p>判断を含む返事 <b>${items.length}通</b> を、名前や番号を伏せて Gemini（Google Cloud・東京）に送り、話題ごとのパターンに分けています。1分ほどかかります。</p>
+        <p class="meta">「承知しました」だけの返事 ${noJudgment.length}通と自動送信のメールは送りません。伏せきれたか確信の持てない行 ${prepared.unsure.reduce((a, u) => a + u.dropped, 0)}行も送りません。</p>
+        <p class="meta" id="gmsg"></p></div>`;
+    } else if (!grouped) {
+      const kinds = {};
+      for (const it of items) for (const m of it.text.matchAll(/［([^］・]*)/g)) kinds[m[1]] = (kinds[m[1]] || 0) + 1;
+      const kindText = Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}か所`).join("・") || "なし";
+      const list = items.map((it) => `<div class="sample${excluded.has(it.ref) ? " off" : ""}">
+          <div class="spread"><span class="meta">${esc(it.staff)}｜${esc(it.subject)}</span>
+          <button class="btn ghost small" data-skip="${it.ref}">${excluded.has(it.ref) ? "取り消す" : "伏せ漏れがある（送らない）"}</button></div>${hl(it.text)}</div>`).join("");
+      const n = items.length - excluded.size;
+      top = `<div class="card"><h2>3. 伏せ方の点検（点検用の画面）</h2>
+        <p class="meta">ふだんはこの画面を出さずに、そのままパターンに分けます。伏せ方を確かめたいときだけ、URL の末尾に ?check=1 を付けて開いてください。これまでの点検: ${(store.get("untangle-leak-log") || []).map((x) => `${new Date(x.at).toLocaleDateString("ja-JP")} ${x.items}通中 漏れ${x.leaks}通`).join("／") || "まだありません"}</p>
+        <div class="todo"><b>やること</b>
+          <ol><li>下の文に、<b>お客様の名前・電話番号・メールアドレス・住所</b>が残っていないか、ざっと目で確かめてください。<br><span class="meta">色のついた所は伏せ済みです（例: <span class="m">名前</span>）。</span></li>
+          <li>残っている文があれば、その文の［伏せ漏れがある（送らない）］を押してください。押した数だけが、このブラウザに記録されます（文は残しません）。</li>
+          <li>いちばん下の［${n}通を送って、パターンに分ける］を押してください。1分ほどで、話題ごとのパターンが出ます。</li></ol></div>
+        <p class="meta">伏せた箇所: ${kindText}。「承知しました」だけの返事 ${noJudgment.length}通と自動送信のメールは、はじめから送りません。スタッフの名前は「スタッフA」のような記号にしています。
+        送り先は Gemini（Google Cloud・東京）で、サーバーでも決まった規則でもう一度確かめ、伏せ残りの疑いがある文は渡しません。送った文はどこにも保存しません。</p>
+        <div class="checklist">${list}</div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="group" ${n ? "" : "disabled"}>${n}通を送って、パターンに分ける</button><span class="meta" id="gmsg"></span></div></div>`;
+    } else if (focus === null) {
+      await fetchStatusOnce();
+      top = dashboardHtml();
+    } else {
+      top = await themeHtml(focus);
+    }
+    $("out").innerHTML = top + (focus === null ? await detailHtml() : "");
+    bindDashboard();
+    const g = $("group");
+    if (g) g.addEventListener("click", sendForGrouping);
+    if (!grouped && !CHECK_MODE && items.length && !sending) sendForGrouping();
+    if (grouped) { bindGroupActions(); bindStage2(); bindStage3(); maybeWatch(); }
+    const rg = $("regroup");
+    if (rg) rg.addEventListener("click", () => { forgetGroups(); grouped = null; groups = null; render(); });
+    document.querySelectorAll("[data-skip]").forEach((b) => b.addEventListener("click", () => {
+      const ref = Number(b.dataset.skip), y = window.scrollY;
+      excluded.has(ref) ? excluded.delete(ref) : excluded.add(ref);
+      render().then(() => window.scrollTo(0, y));
+    }));
+    const hide = $("hide");
+    if (hide) hide.addEventListener("change", (e) => { hideNames = e.target.checked; render(); });
+  }
+
+  let sending = false;
+  async function sendForGrouping() {
+    if (sending) return;
+    sending = true;
+    const g = $("group") || { disabled: false };
+    g.disabled = true; $("gmsg").textContent = "分けています（1分ほどかかります）…";
+    if (CHECK_MODE) logLeaks();
+    try {
+      const res = await fetch("/api/patterns", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: prepared.items.filter((it) => !excluded.has(it.ref)).map(({ ref, staff, subject, text }) => ({ ref, staff, subject, text })) }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `うまくいきませんでした（${res.status}）`);
+      grouped = await res.json();
+      groups = null; initGroups(); saveGroups();
+      sending = false;
+      await render();
+      window.scrollTo({ top: $("out").offsetTop - 12, behavior: "smooth" });
+    } catch (e) { sending = false; $("gmsg").textContent = e.message; g.disabled = false; }
+  }
+
+  // 点検用（?check=1）: 送る前の一覧で［伏せ漏れがある］を押した数を、このブラウザに数として残す（文は残さない）
+  function logLeaks() {
+    const log = store.get("untangle-leak-log") || [];
+    log.push({ at: Date.now(), items: prepared.items.length, leaks: excluded.size });
+    store.set("untangle-leak-log", log.slice(-50));
+  }
+
+  // 第1段: まとまり分けが合っているかを確かめる（決めることはまだ聞かない）
+  let groups = null;
+  function initGroups() {
+    groups = grouped.patterns.map((p) => ({ ...p, refs: [...p.refs], idx: 0, ok: false, editing: false }));
+  }
+
+  // まとまりと確かめた結果を、メールの ID にひもづけてこのブラウザに残す。
+  // 読み込み直しても、メールを読み直せば元に戻る（Gemini をもう一度呼ばない）。メールの本文は残さない
+  const SAVE_KEY = () => `untangle-patterns-${source}`;
+  // 保存: このブラウザと、作業場があれば作業場にも（別の端末でも同じ進み具合が見えるように）。
+  // 今回読んでいない期間のメールのIDも捨てずに残す（期間をずらして読んでも、古いテーマの記録が消えない）
+  let boardTimer = null;
+  function saveGroups() {
+    if (!groups || !prepared) return;
+    const idOf = new Map(prepared.items.map((it) => [it.ref, it.r.id]));
+    const ids = (refs, kept) => [...new Set([...refs.map((r) => idOf.get(r)).filter(Boolean), ...(kept || [])])];
+    const data = { savedAt: Date.now(),
+      groups: groups.map((g) => ({ name: g.name, situation: g.situation, rule: g.rule, variation: g.variation, question: g.question, ok: g.ok, ids: ids(g.refs, g.keptIds),
+        points: g.points && g.points.map((pt) => ({ question: pt.question, options: pt.options.map((o) => ({ label: o.label, ids: ids(o.refs, o.keptIds) })) })),
+        answers: g.answers, adopted: g.adopted, status: g.status, deferred: g.deferred, resolved: g.resolved, pending: g.pending,
+        watch: g.watch, watchDone: g.watchDone, retell: g.retell })).filter((g) => g.ids.length || g.adopted),
+      noJudgment: ids(grouped.no_judgment), held: ids(grouped.held || []) };
+    store.set(SAVE_KEY(), data);
+    if (source === "gmail" && hasWorkspace()) {
+      clearTimeout(boardTimer);
+      boardTimer = setTimeout(() => fetch("/api/patterns/board", { method: "PUT", headers: headers(), body: JSON.stringify(data) }).catch(() => {}), 800);
+    }
+  }
+  async function restoreGroups() {
+    let saved = store.get(SAVE_KEY());
+    if (source === "gmail" && hasWorkspace()) {
+      try {
+        const r = await fetch("/api/patterns/board", { headers: headers() });
+        const board = r.ok ? await r.json() : null;
+        if (board && board.groups && (!saved || (board.savedAt || 0) >= (saved.savedAt || 0))) saved = board;
+      } catch (_) {}
+    }
+    if (!saved || !saved.groups) return false;
+    const refOf = new Map(prepared.items.map((it) => [it.r.id, it.ref]));
+    const refs = (ids) => (ids || []).map((id) => refOf.get(id)).filter(Boolean);
+    const kept = (ids) => (ids || []).filter((id) => !refOf.has(id));
+    const gs = saved.groups.map((g) => ({ ...g, refs: refs(g.ids), keptIds: kept(g.ids), idx: 0, editing: false,
+      points: g.points && g.points.map((pt) => ({ question: pt.question, options: pt.options.map((o) => ({ label: o.label, refs: refs(o.ids), keptIds: kept(o.ids) })) })) }))
+      .filter((g) => g.refs.length || g.keptIds.length || g.adopted);
+    if (!gs.length) return false;
+    groups = gs;
+    grouped = { patterns: gs, no_judgment: refs(saved.noJudgment), held: refs(saved.held), restoredAt: saved.savedAt };
+    return true;
+  }
+  function forgetGroups() { try { localStorage.removeItem(SAVE_KEY()); } catch (_) {} }
+
+  async function mailHtml(it, g) {
+    const r = it.r;
+    const unique = new Set(r.unique);
+    const q = [];
+    for (const l of (r.quoted || []).slice(0, 10)) q.push(await show(l));
+    const body = [];
+    const block = MailScan.addresseeBlock(r.lines);
+    for (const [i, l] of r.lines.entries()) {
+      if (i < block && hideNames) { body.push(`<div><span class="m">宛名</span>${/(様|さま|御中|殿)\s*[,，、]?$/.test(l) ? esc(l.match(/(様|さま|御中|殿)/)[0]) : ""}</div>`); continue; }
+      body.push(unique.has(l) && !isAck(l) ? `<div class="hit">${await show(l)}</div>` : `<div>${await show(l)}</div>`);
+    }
+    return `<div class="example">
+      <div class="meta">${r.date.toLocaleDateString("ja-JP")}｜${esc(staffLabel(r.signer))}｜${esc((await maskText(r.family)) || "")}｜${source === "gmail" ? `<a href="https://mail.google.com/mail/?authuser=${encodeURIComponent(store.get("untangle-gmail-hint") || "")}#all/${esc(r.id)}" target="_blank" rel="noopener">Gmailで開く</a>` : ""}</div>
+      <div class="who">お客様が書いたこと</div>
+      <div class="quote">${q.length ? q.join("<br>") : '<span class="meta">（このメールには引用がありません）</span>'}</div>
+      <div class="who">スタッフが送った全文 <span class="meta">（色の付いた行がひな形に無い＝判断の部分）</span></div>
+      <div class="full">${body.join("")}</div></div>`;
+  }
+
+  async function patternsHtml() {
+    if (!groups) initGroups();
+    const byRef = new Map(prepared.items.map((it) => [it.ref, it]));
+    const cards = [];
+    for (const [gi, g] of groups.entries()) {
+      if (focus !== null && gi !== focus) continue;
+      const its = g.refs.map((r) => byRef.get(r)).filter(Boolean);
+      const people = new Set(its.map((it) => it.staff));
+      const head = `<div class="spread"><h3>${g.ok ? "✓ " : ""}${esc(g.name)}</h3><span class="meta">${its.length}通・${people.size}人</span></div>`;
+      if (g.ok) {
+        cards.push(`<div class="pattern done">${head}<div class="row"><span class="meta">${esc(g.situation || "")}</span><button class="btn ghost small" data-act="undo" data-g="${gi}">確かめ直す</button></div></div>`);
+        continue;
+      }
+      if (!its.length) continue;
+      g.idx = Math.min(g.idx, its.length - 1);
+      const others = groups.map((o, oi) => oi !== gi && o.refs.length ? `<option value="${oi}">${esc(o.name)}</option>` : "").join("");
+      cards.push(`<div class="pattern">${head}
+        ${g.editing ? `<div class="row"><input id="rename-${gi}" value="${esc(g.name)}" style="max-width:320px"><button class="btn small" data-act="rename-save" data-g="${gi}">名前を保存</button></div>` : ""}
+        <p><span class="meta">どんな場面か</span><br><b>${esc(g.situation || "（未記入）")}</b></p>
+        <p class="meta">まとめた答え方: ${esc(g.rule)}</p>
+        <div class="spread"><span class="meta">実例 ${g.idx + 1} / ${its.length}</span>
+          <span class="row"><button class="btn ghost small" data-act="prev" data-g="${gi}" ${g.idx ? "" : "disabled"}>‹ 前の実例</button>
+          <button class="btn ghost small" data-act="next" data-g="${gi}" ${g.idx < its.length - 1 ? "" : "disabled"}>次の実例 ›</button></span></div>
+        ${await mailHtml(its[g.idx], g)}
+        <div class="row"><button class="btn ghost small" data-act="drop" data-g="${gi}" data-ref="${its[g.idx].ref}">この実例はこのパターンではない</button></div>
+        <div class="verdict"><span class="meta">このパターン分けは</span>
+          <button class="btn small" data-act="ok" data-g="${gi}">合っている</button>
+          <button class="btn ghost small" data-act="rename" data-g="${gi}">名前を直す</button>
+          ${others ? `<select data-act="merge" data-g="${gi}" style="width:auto"><option value="">ほかのパターンと一緒にする…</option>${others}</select>` : ""}</div></div>`);
+    }
+    const live = groups.filter((g) => g.refs.length);
+    const okN = live.filter((g) => g.ok).length;
+    const dropped = prepared.items.length - grouped.held.length - new Set(groups.flatMap((g) => g.refs)).size;
+    return `<div class="card"><h2>3. パターン分けを確かめる（第1段）</h2>
+      <div class="todo"><b>やること</b>
+        <ol><li>パターンごとに「どんな場面か」と実例を読み、同じ話が1つのパターンに入っているか確かめてください。<span class="meta">実例は「次の実例 ›」で順に見られます。</span></li>
+        <li>違う話が混ざっていたら［この実例はこのパターンではない］、同じ話が別々になっていたら［ほかのパターンと一緒にする］。</li>
+        <li>合っていれば［合っている］。［合っている］を押したパターンから、下の第2段で「どう決めるか」を伺います。</li></ol>
+        <span class="meta">ここではまだ、何も決める必要はありません。</span></div>
+      ${grouped.restoredAt ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果と確かめた内容を、このブラウザから戻しました。Gemini は呼んでいません。
+        <button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
+      <p class="meta">確かめた ${okN} / ${live.length} パターン。判断の無い返事 ${grouped.no_judgment.length + prepared.noJudgment.length}通・自動送信は外しました。どのパターンにも入らなかった返事 ${Math.max(0, dropped)}通${grouped.held.length ? `、伏せ残りの疑いで送らなかった文 ${grouped.held.length}通` : ""}。</p>
+      ${cards.join("") || (focus === null ? "<p>パターンは見つかりませんでした。</p>" : "")}
+      ${live.length && okN === live.length ? `<p class="big">全部のパターンを確かめました。下の「4. 決め方を決める」へ進んでください。</p>` : ""}</div>`;
+  }
+
+  // ---- ダッシュボード: テーマを状態ごとに並べ、どこまで進んだかを一目で見る ----
+  let focus = null;   // 開いているテーマ（groups の番号）。null ならダッシュボード
+  let dashState = (() => { try { return localStorage.getItem("untangle-dash-state") || "all"; } catch (_) { return "all"; } })();
+  const STEPS = ["分け方", "決め方", "片付け", "見張り", "完了"];
+  const DASH = [
+    { key: "all", lbl: "すべて", sub: "全部のテーマ" },
+    { key: "check", step: 1, lbl: "分け方を確かめる", sub: "パターンが合っているか", you: true, chip: "you" },
+    { key: "decide", step: 2, lbl: "決め方を決める", sub: "実例の答え方から選ぶ", you: true, chip: "you" },
+    { key: "fix", step: 3, lbl: "違う答え方の片付け", sub: "これまでの返事を整理", you: true, chip: "fix" },
+    { key: "watch", step: 4, lbl: "見張り中", sub: "決まりどおりの返事を積む", chip: "watch" },
+    { key: "done", step: 5, lbl: "完了", sub: "マニュアルができた", chip: "done" },
+    { key: "later", step: 2, lbl: "あとで決める", sub: "いまは決めずに残した", chip: "later" },
+  ];
+  const DASH_BY = Object.fromEntries(DASH.map((d) => [d.key, d]));
+  // 見張りで見つけた「決まりと違う返事」のうち、まだ選んでいないもの
+  const openWatchDiffers = (g) => Object.entries(g.watch || {}).filter(([id, w]) => !w.none && w.checks.some((c) => c.verdict === "決まりと違う") && !(g.watchDone || {})[id]).length;
+  const unresolved = (g) => (g.adopted ? (g.adopted.results || []).filter((r, pi) => (r.differ_items || []).length && !(g.resolved || {})[pi]).reduce((a, r) => a + r.differ_items.length, 0) : 0);
+  function stateOf(g) {
+    if (!g.ok) return "check";
+    if (!g.adopted) return g.deferred ? "later" : "decide";
+    if (unresolved(g) || openWatchDiffers(g)) return "fix";
+    if (g.status && g.status.released) return "done";
+    return "watch";
+  }
+  function nextText(g, st) {
+    if (st === "check") return `${g.refs.length}通の実例を見て、分け方が合っているか確かめる`;
+    if (st === "decide") return g.points ? `決めること ${g.points.length}つに答える` : "決めることを並べる";
+    if (st === "later") return "いまは決めずに残しています";
+    if (st === "fix") { const a = unresolved(g), b = openWatchDiffers(g); return [a ? `違う答え方をしていた返事 ${a}通を片付ける` : "", b ? `決まりと違う返事 ${b}通に答える` : ""].filter(Boolean).join("・"); }
+    if (st === "done") return "スタッフ向けマニュアルを見る";
+    return "待つだけ。次に読むとき、決まりどおりか確かめます";
+  }
+  // どのテーマにも、判断の無い返事にも、見張りにも入っていない、前回より後に送った返事
+  function newItems() {
+    if (!grouped || !grouped.restoredAt || watching || watchTargets().length) return [];   // 見張りが済んでから数える
+    const known = new Set();
+    const idOf = new Map(prepared.items.map((it) => [it.ref, it.r.id]));
+    for (const g of groups) { g.refs.forEach((r) => known.add(idOf.get(r))); (g.keptIds || []).forEach((id) => known.add(id)); Object.keys(g.watch || {}).forEach((id) => known.add(id)); }
+    [...(grouped.no_judgment || []), ...(grouped.held || [])].forEach((r) => known.add(idOf.get(r)));
+    return prepared.items.filter((it) => !known.has(it.r.id) && it.r.date.getTime() > grouped.restoredAt);
+  }
+  async function groupNewItems(btn) {
+    const items = newItems();
+    btn.disabled = true; $("newmsg").textContent = "分けています（1分ほど）…";
+    try {
+      const res = await fetch("/api/patterns", { method: "POST", headers: headers(), body: JSON.stringify({ items: payload(items) }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `うまくいきませんでした（${res.status}）`);
+      for (const p of body.patterns) groups.push({ ...p, refs: [...p.refs], keptIds: [], idx: 0, ok: false, editing: false });
+      grouped.no_judgment = [...(grouped.no_judgment || []), ...body.no_judgment];
+      grouped.held = [...(grouped.held || []), ...body.held];
+      saveGroups(); await render();
+    } catch (e) { $("newmsg").textContent = e.message; btn.disabled = false; }
+  }
+
+  function dashboardHtml() {
+    const total = (g) => g.refs.length + (g.keptIds || []).length;
+    // 決まりを作る前のテーマは、今回読んだ範囲に例が無いと何もできないので並べない（記録は消さずに残す）
+    const outside = groups.filter((g) => !g.adopted && !g.refs.length && (g.keptIds || []).length);
+    const live = groups.map((g, gi) => [gi, g]).filter(([, g]) => g.refs.length || g.adopted);
+    const counts = {};
+    for (const [, g] of live) { const k = stateOf(g); counts[k] = (counts[k] || 0) + 1; }
+    if (!DASH_BY[dashState]) dashState = "all";
+    // 5つの段を矢印でつないだ1本の流れ。「あとで決める」は決め方から外れる枝、「すべて」は絞り込みを外すボタン
+    const seg = (k) => { const d = DASH_BY[k]; return `<button class="seg s-${k}" aria-pressed="${dashState === k}" data-dash="${k}">
+      <span class="n">${counts[k] || 0}</span><span class="lbl">${esc(d.lbl)}</span><span class="sub">${esc(d.sub)}</span></button>`; };
+    const buttons = `<div class="flow">
+      <button class="fall" aria-pressed="${dashState === "all"}" data-dash="all"><span class="n">${live.length}</span><span class="lbl">すべて</span></button>
+      <div class="pipe">
+        <div class="band"><span class="b-you">あなたの番</span><span class="b-wait">待つだけ</span></div>
+        <div class="segs">${["check", "decide", "fix", "watch", "done"].map(seg).join("")}</div>
+        <div class="branch"><span class="fork" aria-hidden="true">└</span>
+          <button class="seg-later" aria-pressed="${dashState === "later"}" data-dash="later"><span class="n">${counts.later || 0}</span> あとで決める <span class="sub">いまは決めずに残した</span></button></div>
+      </div></div>`;
+    const order = ["check", "decide", "fix", "watch", "later", "done"];
+    const shown = live.filter(([, g]) => dashState === "all" || stateOf(g) === dashState).sort((a, b) => order.indexOf(stateOf(a[1])) - order.indexOf(stateOf(b[1])));
+    const cards = shown.map(([gi, g]) => {
+      const st = stateOf(g), d = DASH_BY[st];
+      const bars = STEPS.map((_, k) => { const n = k + 1; return `<span class="${n < d.step || st === "done" ? "done" : n === d.step ? `now ${st}` : ""}"></span>`; }).join("");
+      const lbls = STEPS.map((x, k) => `<span>${k + 1 === d.step && st !== "done" ? `<b>${x}</b>` : x}</span>`).join("");
+      const s = g.status, watched = s ? Math.max(0, s.window - s.remaining) : 0;
+      const meter = st === "watch" && s ? `<div class="meter">決まりどおりの返事 <div class="mbar"><i style="width:${Math.min(100, (watched / s.window) * 100)}%"></i></div><b>${watched} / ${s.window}通</b></div>` : "";
+      const people = new Set(itemsOf(g.refs).map((it) => it.staff)).size;
+      const facts = [`実例 ${total(g)}通${(g.keptIds || []).length ? `（今回の期間に${g.refs.length}通）` : ""}`, `スタッフ ${people}人`, g.adopted ? `決まり ${(g.adopted.results || []).length}条` : "", s && s.released ? `第${s.released}版` : ""].filter(Boolean).map((x) => `<span>${x}</span>`).join("");
+      return `<button class="tcard" data-open="${gi}">
+        <div class="ttop"><div><h3>${esc(g.name)}</h3><div class="meta">${esc(g.situation || "")}</div></div><span class="chip c-${st}">${esc(d.lbl)}</span></div>
+        <div class="steps">${bars}</div><div class="steplbl">${lbls}</div>${meter}<div class="facts">${facts}</div>
+        <div class="tnext"><span>${esc(nextText(g, st))}</span><span class="go">開く ›</span></div></button>`;
+    }).join("");
+    const nj = grouped.no_judgment.length + prepared.noJudgment.length;
+    return `<div class="card"><div class="spread"><h2>判断のテーマ</h2><span class="meta">送ったメール ${results.length}通から ${live.length}テーマ</span></div>
+      <p class="meta">上のボタンで状態ごとに絞り込めます。カードを押すと、そのテーマの画面に入ります。判断の無い返事 ${nj}通・自動送信は外しています。${grouped.held && grouped.held.length ? `伏せ残りの疑いで送らなかった文 ${grouped.held.length}通。` : ""}</p>
+      ${grouped.restoredAt ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果から続けています。<button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
+      ${(() => { const n = newItems().length; return n ? `<div class="row"><button class="btn small" id="groupNew">新しく送ったメール ${n}通をパターンに分ける</button><span class="meta" id="newmsg">どのテーマにも見張りにも入らなかった、前回より後の返事です。新しいテーマは「分け方を確かめる」に入ります。</span></div>` : ""; })()}
+      ${buttons}
+      ${outside.length ? `<p class="meta">今回読んだ範囲に例の無いテーマが ${outside.length}件あります（決まりを作る前のもの）。読む期間を広げると出ます。</p>` : ""}
+      <div class="tlist">${cards || '<div class="tempty">この状態のテーマはありません</div>'}</div></div>`;
+  }
+  // 1つのテーマの画面: いまの段を一番上に、ほかの段は畳む
+  async function themeHtml(gi) {
+    const g = groups[gi];
+    if (!g || (!g.refs.length && !(g.keptIds || []).length && !g.adopted)) { focus = null; return dashboardHtml(); }
+    const st = stateOf(g), d = DASH_BY[st];
+    const parts = [await patternsHtml(), await stage2Html(), await stage3Html()];
+    if (!g.refs.length) {
+      const note = `<div class="card"><p>このテーマの例 ${(g.keptIds || []).length}通は、今回読んだ範囲に入っていません。例を見るには、「2. 読むメール」の検索条件で期間を広げて読み直してください。</p></div>`;
+      parts[0] = parts[0] && g.ok ? parts[0] : note;
+      if (!g.adopted) parts[1] = note;
+    }
+    const now = { check: 0, decide: 1, later: 1, fix: 2, watch: 2, done: 2 }[st];
+    const others = parts.map((h, i) => (i !== now && h ? h : "")).filter(Boolean).join("");
+    return `<div class="themehead"><button class="btn ghost small" id="backDash">‹ テーマの一覧</button>
+        <h2>${esc(g.name)}</h2><span class="chip c-${st}">${esc(d.lbl)}</span></div>
+      ${parts[now] || ""}
+      ${others ? `<details class="card"><summary><b>ほかの段</b> <span class="meta">（終わった段・この先の段）</span></summary>${others}</details>` : ""}`;
+  }
+  function bindDashboard() {
+    document.querySelectorAll("[data-dash]").forEach((b) => b.addEventListener("click", () => {
+      dashState = b.dataset.dash; try { localStorage.setItem("untangle-dash-state", dashState); } catch (_) {}
+      render();
+    }));
+    document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", async () => {
+      focus = Number(b.dataset.open); await render(); window.scrollTo({ top: $("out").offsetTop - 12 });
+    }));
+    const gn = $("groupNew");
+    if (gn) gn.addEventListener("click", () => groupNewItems(gn));
+    const back = $("backDash");
+    if (back) back.addEventListener("click", async () => { focus = null; await render(); window.scrollTo({ top: $("out").offsetTop - 12 }); });
+  }
+
+  // ---- 第2段: 確かめたパターンについて、決め方を伺う ----
+  function headers() {
+    const ls = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+    let sid = ls("untangle-session");
+    if (!sid) { sid = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2); try { localStorage.setItem("untangle-session", sid); } catch (_) {} }
+    const h = { "Content-Type": "application/json", "X-Untangle-Session": sid };
+    const ws = ls("untangle-ws");
+    if (source === "gmail" && ws && ls("untangle-mode") !== "demo") h["X-Untangle-Workspace"] = ws;
+    return h;
+  }
+  const hasWorkspace = () => { try { return !!localStorage.getItem("untangle-ws") && localStorage.getItem("untangle-mode") !== "demo"; } catch (_) { return false; } };
+  const itemsOf = (refs) => { const by = new Map(prepared.items.map((it) => [it.ref, it])); return refs.map((r) => by.get(r)).filter(Boolean); };
+  const isoDay = (d) => { const x = new Date(d); return isNaN(x) ? null : `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const payload = (its) => its.map(({ ref, staff, subject, text, r }) => ({ ref, staff, subject, text, date: isoDay(r.date) }));
+
+  async function stage2Html() {
+    const ready = groups.filter((g, gi) => g.ok && g.refs.length && (focus === null || gi === focus));
+    if (!ready.length) return "";
+    const cards = [];
+    for (const [gi, g] of groups.entries()) {
+      if (focus !== null && gi !== focus) continue;
+      if (!g.ok || !g.refs.length) continue;
+      const head = `<div class="spread"><h3>${esc(g.name)}</h3><span class="meta">${g.refs.length}通</span></div><p class="meta">${esc(g.situation || "")}</p>`;
+      if (!g.points) {
+        cards.push(`<div class="pattern">${head}<div class="row"><button class="btn small" data-s2="points" data-g="${gi}">決めることを並べる</button><span class="meta" id="s2msg-${gi}"></span></div></div>`);
+        continue;
+      }
+      g.answers = g.answers || {};
+      const pts = [];
+      for (const [pi, pt] of g.points.entries()) {
+        const a = g.answers[pi] || {};
+        const opts = [];
+        for (const [oi, o] of pt.options.entries()) {
+          const ex = [];
+          for (const it of itemsOf(o.refs).slice(0, 2)) ex.push(await mailHtml(it, g));
+          opts.push(`<label class="opt"><input type="radio" name="a-${gi}-${pi}" value="${oi}" data-s2="pick" data-g="${gi}" data-p="${pi}" ${String(a.choice) === String(oi) ? "checked" : ""}>
+            <span>${esc(o.label)} <span class="meta">（実例 ${o.refs.length}通）</span></span></label>
+            ${ex.length ? `<details class="optex"><summary class="meta">この答え方の実例を見る</summary>${ex.join("")}</details>` : ""}`);
+        }
+        opts.push(`<label class="opt"><input type="radio" name="a-${gi}-${pi}" value="other" data-s2="pick" data-g="${gi}" data-p="${pi}" ${a.choice === "other" ? "checked" : ""}>
+          <span>その他（自分で書く）</span></label>
+          ${a.choice === "other" ? `<input class="other" data-s2="other" data-g="${gi}" data-p="${pi}" value="${esc(a.other || "")}" placeholder="例: 1週間前からとる">` : ""}`);
+        opts.push(`<label class="opt"><input type="radio" name="a-${gi}-${pi}" value="skip" data-s2="pick" data-g="${gi}" data-p="${pi}" ${a.choice === "skip" ? "checked" : ""}>
+          <span>いまは決めない</span></label>`);
+        pts.push(`<div class="point"><p><b>${pi + 1}. ${esc(pt.question)}</b></p>${opts.join("")}
+          <input class="reason" data-s2="reason" data-g="${gi}" data-p="${pi}" value="${esc(a.reason || "")}" placeholder="理由（任意。スタッフへの説明になります）"></div>`);
+      }
+      const done = g.adopted ? `<div class="adopted">${g.adopted.results.map((r) => `<div>✓ <b>第${r.article}条</b> ${esc(r.question)} → <b>${esc(r.decision)}</b><br>
+          <span class="meta">これまでの実例で当て直すと: この決まりどおり ${r.match}通・違う答え方をしていた ${r.differ}通${r.differ ? "（スタッフに伝える必要があるところ）" : ""}</span></div>`).join("")}
+          <p class="meta">テーマ「${esc(g.adopted.theme)}」に入りました。${g.adopted.workspace ? '<a href="/rules" target="_blank" rel="noopener">条文と出口で開く</a>（作業場に保存済み）' : "（架空のメールなので、このブラウザの試しの中だけに入っています）"}</p></div>` : "";
+      if (g.deferred && !g.adopted) {
+        cards.push(`<div class="pattern done">${head}<div class="row"><span class="meta">いまは決めずに残しています（あとで決める）</span>
+          <button class="btn ghost small" data-s2="undefer" data-g="${gi}">決める</button></div></div>`);
+        continue;
+      }
+      cards.push(`<div class="pattern">${head}${pts.join("")}
+        <div class="row"><button class="btn small" data-s2="adopt" data-g="${gi}">${g.adopted ? "この答えで決め直す" : "この答えで決まりにする"}</button><span class="meta" id="s2msg-${gi}"></span></div>${done}</div>`);
+    }
+    const needWs = source === "gmail" && !hasWorkspace();
+    return `<div class="card"><h2>4. 決め方を決める（第2段）</h2>
+      <div class="todo"><b>やること</b>
+        <ol><li>［合っている］を押したパターンごとに［決めることを並べる］を押してください。実例に出た答え方が、件数つきで並びます。</li>
+        <li>問いごとに答えを選んでください。実例の答え方のどれか・自分で書く・いまは決めない、から選べます。</li>
+        <li>［この答えで決まりにする］を押すと、Untangle の決まり（第何条）になり、これまでの実例で当て直した結果が出ます。</li></ol></div>
+      ${needWs ? `<p class="big">決まりを残すには作業場が要ります。ページの一番上の［作業場を作る］を押してください。</p>` : ""}
+      ${cards.join("")}</div>`;
+  }
+
+  function bindStage2() {
+    document.querySelectorAll("[data-s2]").forEach((el) => {
+      const gi = Number(el.dataset.g), g = groups[gi], pi = Number(el.dataset.p);
+      if (!g) return;
+      const ans = () => ((g.answers = g.answers || {})[pi] = g.answers[pi] || {});
+      const rerender = () => { saveGroups(); const y = window.scrollY; render().then(() => window.scrollTo(0, y)); };
+      const act = el.dataset.s2;
+      if (act === "pick") el.addEventListener("change", () => { ans().choice = el.value; rerender(); });
+      else if (act === "undefer") el.addEventListener("click", () => { g.deferred = false; rerender(); });
+      else if (act === "other") el.addEventListener("input", () => { ans().other = el.value; saveGroups(); });
+      else if (act === "reason") el.addEventListener("input", () => { ans().reason = el.value; saveGroups(); });
+      else if (act === "points") el.addEventListener("click", async () => {
+        el.disabled = true; $(`s2msg-${gi}`).textContent = "並べています（30秒ほど）…";
+        try {
+          const res = await fetch("/api/patterns/points", { method: "POST", headers: headers(),
+            body: JSON.stringify({ name: g.name, situation: g.situation || "", items: payload(itemsOf(g.refs)) }) });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.detail || `うまくいきませんでした（${res.status}）`);
+          if (!body.points.length) throw new Error("決めることが見つかりませんでした");
+          g.points = body.points; g.answers = {}; rerender();
+        } catch (e) { $(`s2msg-${gi}`).textContent = e.message; el.disabled = false; }
+      });
+      else if (act === "adopt") el.addEventListener("click", async () => {
+        const msg = $(`s2msg-${gi}`);
+        if (source === "gmail" && !hasWorkspace()) { msg.textContent = "先に Untangle の作業場を作ってください（上の案内）"; return; }
+        const points = [];
+        for (const [i, pt] of g.points.entries()) {
+          const a = (g.answers || {})[i] || {};
+          if (a.choice === undefined || a.choice === "skip") continue;
+          const chosen = a.choice === "other" ? (a.other || "").trim() : pt.options[Number(a.choice)].label;
+          if (!chosen) { msg.textContent = `${i + 1}. の「その他」に答えを書いてください`; return; }
+          const examples = pt.options.flatMap((o) => itemsOf(o.refs).map((it) => ({ ref: it.ref, staff: it.staff, text: it.text, decision: o.label, date: isoDay(it.r.date) })));
+          points.push({ question: pt.question, options: pt.options.map((o) => o.label), chosen, reason: (a.reason || "").trim(), examples });
+        }
+        if (!points.length) {
+          const picked = g.points.map((_, i) => ((g.answers || {})[i] || {}).choice);
+          if (picked.some((c) => c === undefined)) { msg.textContent = "問いごとに答えを選んでください（決めない問いは「いまは決めない」）"; return; }
+          g.deferred = true; rerender(); return;   // 全部「いまは決めない」→ あとで決めるパターンとして残す
+        }
+        g.deferred = false;
+        el.disabled = true; msg.textContent = "決まりにしています…";
+        try {
+          const res = await fetch("/api/patterns/adopt", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, situation: g.situation || "", points }) });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.detail || `うまくいきませんでした（${res.status}）`);
+          // 違う答え方の実例はメールの ID で覚える（読み直すと番号がずれるため）
+          for (const r of body.results || []) r.differ_items = (r.differ_items || []).map((d) => ({ ...d, id: (itemsOf([d.ref])[0] || { r: {} }).r.id })).filter((d) => d.id);
+          g.adopted = { ...body, at: (g.adopted && g.adopted.at) || Date.now() }; g.status = body.status; g.manual = null; g.resolved = g.resolved || {}; rerender();
+        } catch (e) { msg.textContent = e.message; el.disabled = false; }
+      });
+    });
+  }
+
+  // ---- 第3段: 伝える・見張る ----
+  const itemById = (id) => prepared.items.find((it) => it.r.id === id);
+  // 決まりより前の答え方（第2段で「違う答え方」と出た実例）の片付け
+  async function cleanupHtml(gi, g) {
+    const parts = [];
+    for (const [pi, res] of (g.adopted.results || []).entries()) {
+      const items = (res.differ_items || []).map((d) => ({ ...d, it: itemById(d.id) })).filter((d) => d.it);
+      if (!items.length) continue;
+      const done = (g.resolved || {})[pi];
+      const rows = [];
+      for (const d of items) {
+        const key = `${gi}-${pi}-${d.id}`;
+        const pick = (g.pending || {})[key] || {};
+        rows.push(`<div class="mail"><div class="meta">${d.it.r.date.toLocaleDateString("ja-JP")}｜${esc(d.it.staff)}｜書いた答え: <b>${esc(d.decision)}</b></div>
+          ${d.it.text.split("\n").map((l) => `<div>${hl(l)}</div>`).join("")}
+          ${done ? `<p class="meta">✓ ${done.resolved.includes(d.it.ref) ? (pick.choice === "exception" ? `例外にしました（${esc(pick.condition || "")}）` : "これからは決まりどおり") : "片付け済み"}</p>` : `
+          <label class="opt"><input type="radio" name="c-${key}" data-s3="pick" data-k="${key}" value="follow" ${pick.choice === "follow" ? "checked" : ""}><span>これからは決まりどおり（スタッフに伝える）</span></label>
+          <label class="opt"><input type="radio" name="c-${key}" data-s3="pick" data-k="${key}" value="exception" ${pick.choice === "exception" ? "checked" : ""}><span>この場合は例外にする</span></label>
+          ${pick.choice === "exception" ? `<input data-s3="cond" data-k="${key}" value="${esc(pick.condition || "")}" placeholder="例外の条件（例: 団体のとき）">` : ""}`}</div>`);
+      }
+      parts.push(`<div class="point"><p><b>第${res.article}条</b> ${esc(res.question)} → <b>${esc(res.decision)}</b></p>
+        <p class="meta">決まりと違う答え方をしていた実例です。1通ずつ、どちらかを選んでください。</p>${rows.join("")}
+        ${done ? `<p class="meta">当て直すと: 決まりどおり ${done.match}通・違う ${done.differ}通</p>` : `<div class="row"><button class="btn small" data-s3="resolve" data-g="${gi}" data-p="${pi}">片付ける</button><span class="meta" id="s3msg-${gi}-${pi}"></span></div>`}</div>`);
+    }
+    return parts.join("");
+  }
+  // スタッフへの知らせ（決まった形で組み立てる。AI は使わない）
+  function noticeText(g) {
+    const lines = [`【決まり】${g.name}`, `場面: ${g.situation || ""}`];
+    for (const [pi, res] of (g.adopted.results || []).entries()) {
+      const reason = ((g.answers || {})[pi] || {}).reason;
+      lines.push(`・${res.question} → ${res.decision}${reason ? `（理由: ${reason}）` : ""}`);
+      const done = (g.resolved || {})[pi];
+      const followed = (res.differ_items || []).filter((d) => ((g.pending || {})[`${groups.indexOf(g)}-${pi}-${d.id}`] || {}).choice !== "exception");
+      if (followed.length) lines.push(`　これまで「${[...new Set(followed.map((d) => d.decision))].join("」「")}」と書いた返事が${followed.length}通ありました。今後は「${res.decision}」でお願いします。`);
+      for (const a of (done && done.articles) || []) if (a.condition) lines.push(`　ただし、${a.condition}は「${a.decision}」とします。`);
+    }
+    for (const r of g.retell || []) lines.push(`・${r.date} に送った返事が決まりと違っていました。今後は決まりどおりでお願いします。`);
+    return lines.join("\n");
+  }
+  // 見張り: 決まりを作ってから送ったメールが、決まりどおりか
+  function watchTargets() {
+    const adopted = groups.filter((g) => g.adopted);
+    if (!adopted.length) return [];
+    const since = Math.min(...adopted.map((g) => g.adopted.at || Date.now()));
+    const checked = new Set(adopted.flatMap((g) => Object.keys(g.watch || {})));
+    return prepared.items.filter((it) => it.r.date.getTime() > since && !checked.has(it.r.id));
+  }
+  let watching = false;
+  const demoWeeks = [];   // 架空の「次の週」に届いたメール（押すたびに1週ぶん増える）
+  async function maybeWatch() {
+    if (watching || !groups) return;
+    const targets = watchTargets();
+    if (!targets.length) return;
+    watching = true;
+    const adopted = groups.filter((g) => g.adopted);
+    try {
+      const rules = adopted.map((g) => ({ name: g.name, situation: g.situation || "", questions: g.adopted.results.map((r) => r.question), decisions: g.adopted.results.map((r) => r.decision) }));
+      const res = await fetch("/api/patterns/watch", { method: "POST", headers: headers(), body: JSON.stringify({ rules, items: payload(targets) }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `見張りがうまくいきませんでした（${res.status}）`);
+      for (const a of adopted) if (body.status && body.status[a.name]) { a.status = body.status[a.name]; a.manual = null; }
+      const byRef = new Map(body.results.map((x) => [x.ref, x]));
+      for (const it of targets) {
+        const x = byRef.get(it.ref);
+        const g = x && adopted.find((a) => a.name === x.pattern);
+        for (const a of adopted) a.watch = a.watch || {};
+        (g || adopted[0]).watch[it.r.id] = g ? { checks: x.checks } : { none: true };
+      }
+      saveGroups();
+    } catch (e) { const m = $("watchmsg"); if (m) m.textContent = e.message; }
+    watching = false;
+    const y = window.scrollY; await render(); window.scrollTo(0, y);
+  }
+  async function watchHtml(gi, g) {
+    const entries = Object.entries(g.watch || {}).filter(([, w]) => !w.none);
+    if (!entries.length) return `<p class="meta">決まりを作ってから送ったメールのうち、このパターンに入るものはまだありません。</p>`;
+    const ok = entries.filter(([, w]) => w.checks.every((c) => c.verdict !== "決まりと違う"));
+    const ng = entries.filter(([, w]) => w.checks.some((c) => c.verdict === "決まりと違う"));
+    const rows = [];
+    for (const [id, w] of ng) {
+      const it = itemById(id);
+      if (!it) continue;
+      const key = `w-${gi}-${id}`;
+      const st = (g.watchDone || {})[id];
+      const qs = w.checks.filter((c) => c.verdict === "決まりと違う").map((c) => g.adopted.results[c.question_no - 1]).filter(Boolean);
+      rows.push(`<div class="mail"><div class="meta">${it.r.date.toLocaleDateString("ja-JP")}｜${esc(it.staff)}｜違う決まり: ${qs.map((q) => `第${q.article}条`).join("・")}</div>
+        ${it.text.split("\n").map((l) => `<div>${hl(l)}</div>`).join("")}
+        ${st ? `<p class="meta">✓ ${esc(st)}</p>` : `<div class="row">
+          <button class="btn ghost small" data-s3="retell" data-g="${gi}" data-id="${id}">スタッフに伝え直す</button>
+          <input data-s3="wcond" data-k="${key}" placeholder="例外の条件（例: 団体のとき）" style="max-width:220px">
+          <input data-s3="wdec" data-k="${key}" placeholder="この場合の答え" style="max-width:180px">
+          <button class="btn ghost small" data-s3="wexception" data-g="${gi}" data-id="${id}">例外にする</button></div>`}</div>`);
+    }
+    return `<p>決まりを作ってから送ったメールのうち、このパターンに入るもの <b>${entries.length}通</b>: 決まりどおり ${ok.length}通・<b>決まりと違う ${ng.length}通</b></p>${rows.join("")}`;
+  }
+  // 完了までの残り（4つの確かめ）と、完了したらスタッフ向けマニュアル
+  async function loadManual(g) {
+    if (g.manual || !g.status || !g.status.released) return;
+    try {
+      const r = await fetch(`/api/themes/${encodeURIComponent(g.status.theme_id)}/exits/manual`, { headers: headers() });
+      if (r.ok) g.manual = await r.json();
+    } catch (_) {}
+  }
+  async function completionHtml(gi, g) {
+    const st = g.status;
+    if (!st) return "";
+    if (st.released) {
+      await loadManual(g);
+      const m = g.manual;
+      const body = m ? m.sections.map((sec) => `<p><b>${esc(sec.title)}</b></p><ul>${sec.items.map((it) => `<li>第${it.number}条 ${esc(it.text)}${it.reason ? `<br><span class="meta">理由: ${esc(it.reason)}</span>` : ""}</li>`).join("")}</ul>`).join("")
+        + `<p class="meta">決裁者に回すこと: ${m.ask_owner.map(esc).join("／")}</p>` : `<p class="meta">マニュアルを読み込めませんでした。</p>`;
+      return `<div class="adopted"><b>✓ 完了しました（第${st.released}版）</b> — 決まりを作った後も、決まりどおりの返事が直近${st.window}通続きました。
+        <details open><summary><b>スタッフ向けマニュアル</b></summary>${body}</details>
+        <p class="meta">送ったメールから作った決まりは「いつでも○○」という条件の無い形なので、AI 向けの指示や自動化の仕様書は出しません。人に渡すマニュアルだけです。</p></div>`;
+    }
+    return `<div class="progress"><p><b>完了まで</b>: 決まりを作った後の、決まりどおりの返事が<b>あと${st.remaining}通</b>
+      <span class="meta">（見張りで決まりどおりだった返事が積み上がります）</span></p>
+      <ul class="checks">${st.checks.map((c) => `<li>${c.ok ? "✓" : "・"} ${esc(c.label)} <span class="meta">${esc(c.answer || "")}</span></li>`).join("")}</ul>
+      <div class="row"><span class="meta">直近</span><input type="number" min="3" max="50" value="${st.window}" data-s3="window" data-g="${gi}" style="width:70px"><span class="meta">通に新しい話が出なければ完了とする</span>
+      <button class="btn ghost small" data-s3="setwindow" data-g="${gi}">変える</button></div></div>`;
+  }
+  let statusFetched = false;
+  async function fetchStatusOnce() {
+    if (statusFetched || !groups) return;
+    statusFetched = true;
+    const names = groups.filter((g) => g.adopted).map((g) => g.name);
+    if (!names.length) return;
+    try {
+      const r = await fetch(`/api/patterns/status?names=${encodeURIComponent(names.join("|"))}`, { headers: headers() });
+      if (!r.ok) return;
+      const body = await r.json();
+      for (const g of groups) if (body[g.name]) g.status = body[g.name];
+    } catch (_) {}
+  }
+
+  async function stage3Html() {
+    await fetchStatusOnce();
+    const adopted = groups.map((g, gi) => [gi, g]).filter(([gi, g]) => g.adopted && (focus === null || gi === focus));
+    if (!adopted.length) return "";
+    const cards = [];
+    for (const [gi, g] of adopted) {
+      cards.push(`<div class="pattern"><h3>${esc(g.name)}</h3>
+        ${await completionHtml(gi, g)}
+        ${await cleanupHtml(gi, g)}
+        <p><b>スタッフへの知らせ</b> <span class="meta">（コピーして、いつもの連絡に貼ってください）</span></p>
+        <pre class="notice" id="notice-${gi}">${esc(noticeText(g))}</pre>
+        <div class="row"><button class="btn ghost small" data-s3="copy" data-g="${gi}">知らせをコピー</button><span class="meta" id="copymsg-${gi}"></span></div>
+        <p><b>見張り</b></p>${await watchHtml(gi, g)}</div>`);
+    }
+    return `<div class="card"><h2>5. 伝える・見張る（第3段）</h2>
+      <div class="todo"><b>やること</b>
+        <ol><li>決まりと違う答え方をしていた実例を、1通ずつ「これからは決まりどおり」か「この場合は例外」に片付けてください。</li>
+        <li>できあがった「スタッフへの知らせ」をコピーして、いつもの連絡に貼ってください。</li>
+        <li>次に「読んで分ける」を押すと、決まりを作ってから送ったメールが決まりどおりかを見張ります。違っていたら、伝え直すか例外にするかを選んでください。</li>
+        <li>決まりどおりの返事が積み上がって「完了」になると、スタッフ向けマニュアルができあがります。</li></ol></div>
+      ${source === "demo" ? `<div class="row"><button class="btn ghost" id="demoNext">次の週に送ったメール（架空）を読み込む</button><span class="meta">押すたびに1週ぶん（5通）届きます${demoWeeks.length ? `。いま ${demoWeeks.length / 5} 週ぶん` : ""}</span></div>` : ""}
+      <p class="meta" id="watchmsg">${watchTargets().length ? "見張っています…" : ""}</p>
+      ${cards.join("")}</div>`;
+  }
+  function bindStage3() {
+    const rerender = () => { saveGroups(); const y = window.scrollY; render().then(() => window.scrollTo(0, y)); };
+    document.querySelectorAll("[data-s3]").forEach((el) => {
+      const act = el.dataset.s3, gi = Number(el.dataset.g), g = groups[gi];
+      const pend = (k) => { const gg = groups[Number(k.split("-")[0])]; gg.pending = gg.pending || {}; return (gg.pending[k] = gg.pending[k] || {}); };
+      if (act === "pick") el.addEventListener("change", () => { pend(el.dataset.k).choice = el.value; rerender(); });
+      else if (act === "cond") el.addEventListener("input", () => { pend(el.dataset.k).condition = el.value; saveGroups(); });
+      else if (act === "resolve") el.addEventListener("click", async () => {
+        const pi = Number(el.dataset.p), res = g.adopted.results[pi], msg = $(`s3msg-${gi}-${pi}`);
+        const items = [];
+        for (const d of res.differ_items || []) {
+          const p = (g.pending || {})[`${gi}-${pi}-${d.id}`] || {};
+          const it = itemById(d.id);
+          if (!it) continue;
+          if (!p.choice) { msg.textContent = "すべての実例について、どちらかを選んでください"; return; }
+          if (p.choice === "exception" && !(p.condition || "").trim()) { msg.textContent = "例外の条件を書いてください"; return; }
+          items.push({ ref: it.ref, staff: it.staff, text: it.text, choice: p.choice, condition: (p.condition || "").trim() });
+        }
+        el.disabled = true; msg.textContent = "片付けています…";
+        try {
+          const r = await fetch("/api/patterns/resolve", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, question: res.question, items }) });
+          const body = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(body.detail || `うまくいきませんでした（${r.status}）`);
+          g.resolved = g.resolved || {}; g.resolved[pi] = body; g.status = body.status; g.manual = null; rerender();
+        } catch (e) { msg.textContent = e.message; el.disabled = false; }
+      });
+      else if (act === "setwindow") el.addEventListener("click", async () => {
+        const v = Number((document.querySelector(`[data-s3="window"][data-g="${gi}"]`) || {}).value);
+        if (!(v >= 3 && v <= 50)) { alert("3〜50通の間で決めてください"); return; }
+        try {
+          const r = await fetch("/api/patterns/criteria", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, window: v }) });
+          const body = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(body.detail || `うまくいきませんでした（${r.status}）`);
+          g.status = body; g.manual = null; rerender();
+        } catch (e) { alert(e.message); }
+      });
+      else if (act === "copy") el.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(noticeText(g)); $(`copymsg-${gi}`).textContent = "コピーしました"; }
+        catch (_) { $(`copymsg-${gi}`).textContent = "コピーできませんでした。枠の中を選んでコピーしてください"; }
+      });
+      else if (act === "retell") el.addEventListener("click", () => {
+        const it = itemById(el.dataset.id);
+        g.retell = [...(g.retell || []), { date: it.r.date.toLocaleDateString("ja-JP") }];
+        g.watchDone = { ...(g.watchDone || {}), [el.dataset.id]: "スタッフへの知らせに加えました" }; rerender();
+      });
+      else if (act === "wexception") el.addEventListener("click", async () => {
+        const id = el.dataset.id, it = itemById(id), key = `w-${gi}-${id}`;
+        const cond = (document.querySelector(`[data-s3="wcond"][data-k="${key}"]`) || {}).value || "";
+        const dec = (document.querySelector(`[data-s3="wdec"][data-k="${key}"]`) || {}).value || "";
+        if (!cond.trim() || !dec.trim()) { alert("例外の条件と、この場合の答えを書いてください"); return; }
+        const qs = (g.watch[id].checks || []).filter((c) => c.verdict === "決まりと違う").map((c) => g.adopted.results[c.question_no - 1]).filter(Boolean);
+        el.disabled = true;
+        try {
+          for (const q of qs) {
+            const r = await fetch("/api/patterns/resolve", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, question: q.question,
+              items: [{ ref: it.ref, staff: it.staff, text: it.text, choice: "exception", condition: cond.trim(), decision: dec.trim() }] }) });
+            const body = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(body.detail || `うまくいきませんでした（${r.status}）`);
+          }
+          g.watchDone = { ...(g.watchDone || {}), [id]: `例外にしました（${cond.trim()}は「${dec.trim()}」）` }; rerender();
+        } catch (e) { alert(e.message); el.disabled = false; }
+      });
+    });
+    const dn = $("demoNext");
+    if (dn) dn.addEventListener("click", async () => {
+      const now = Date.now();
+      demoWeeks.push(...window.MAIL_SCAN_DEMO_NEXT(demoWeeks.length / 5 + 1).map((m, i) => ({ ...m, date: new Date(now + (i + 1) * 60000) })));
+      results = MailScan.analyze([...window.MAIL_SCAN_DEMO, ...demoWeeks], DEMO_SETTINGS); prepared = null; maskCtx = null;
+      await prepare(); await restoreGroups(); await render();
+    });
+  }
+
+  function bindGroupActions() {
+    document.querySelectorAll("[data-act]").forEach((el) => {
+      const g = groups && groups[Number(el.dataset.g)];
+      if (!g) return;
+      const rerender = () => { saveGroups(); const y = window.scrollY; render().then(() => window.scrollTo(0, y)); };
+      if (el.dataset.act === "merge") {
+        el.addEventListener("change", () => {
+          const t = groups[Number(el.value)];
+          if (!t) return;
+          t.refs = [...new Set([...t.refs, ...g.refs])]; t.keptIds = [...new Set([...(t.keptIds || []), ...(g.keptIds || [])])]; t.ok = false; g.refs = []; g.keptIds = [];
+          rerender();
+        });
+        return;
+      }
+      el.addEventListener("click", () => {
+        const a = el.dataset.act;
+        if (a === "prev") g.idx--;
+        else if (a === "next") g.idx++;
+        else if (a === "ok") g.ok = true;
+        else if (a === "undo") g.ok = false;
+        else if (a === "rename") g.editing = true;
+        else if (a === "rename-save") { const v = $(`rename-${el.dataset.g}`).value.trim(); if (v) g.name = v; g.editing = false; }
+        else if (a === "drop") g.refs = g.refs.filter((r) => r !== Number(el.dataset.ref));
+        rerender();
+      });
+    });
+  }
+
+  async function detailHtml() {
+    const KINDS = ["ひな形どおり", "条件つきの定型", "書き足し", "返信での判断", "別の型", "個別のやり取り", "社内のやり取り"];
+    const fams = {};
+    for (const r of results) { const f = fams[r.family] ||= { total: 0, auto: 0 }; f.total++; if (r.auto) f.auto++; f[r.kind] = (f[r.kind] || 0) + 1; }
+    const famRows = Object.entries(fams).sort((a, b) => b[1].total - a[1].total).slice(0, 15)
+      .map(([f, c]) => `<tr><td>${esc(f)}</td><td class="num">${c.total}</td><td class="num">${c.auto}</td>${KINDS.map((k) => `<td class="num">${c[k] || 0}</td>`).join("")}</tr>`).join("");
+    return `<details class="card"><summary><b>確かめる用: 件名ごとの内訳</b> <span class="meta">（分け方が正しいかを見るためのもの。ふだんは見なくてよい）</span></summary>
+      <label class="row" style="margin:8px 0"><input type="checkbox" id="hide" style="width:auto" ${hideNames ? "checked" : ""}> 名前や番号を伏せて表示</label>
+      <div class="tablewrap"><table><thead><tr><th>件名（型）</th><th>通数</th><th>自動送信</th>${KINDS.map((k) => `<th>${k}</th>`).join("")}</tr></thead><tbody>${famRows}</tbody></table></div>
+      <p class="meta">ひな形どおり＝全部の行がほかのメールにも同じ形で出る／条件つきの定型＝一部のメールにだけ同じ形で出る段落がある（仕組みの規則）／書き足し＝ひな形にない文がある（スタッフの判断）／返信での判断＝お客様の返信(Re:)に、ひな形より自分の文の多い返事をした／別の型＝同じ件名なのにひな形の本体が無い／個別のやり取り＝その件名が2通以下／社内のやり取り＝Fwd:・社内宛て・「お疲れ様です」で始まる</p></details>`;
+  }
+  const hl = (t) => esc(t).replace(/［([^］]*)］/g, '<span class="m">$1</span>').replace(/\n/g, "<br>");
+})();
+</script>
+</body>
+</html>

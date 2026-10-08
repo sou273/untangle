@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Untangle 端末内AIの試験</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  main.solo{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:24px 60px;display:flex;flex-direction:column;gap:16px}
+  .big{font-size:1.1rem;font-weight:700}
+  td.ok{color:var(--ok);font-weight:700} td.ng{color:var(--bad);font-weight:700}
+  code{font-size:.85em;background:var(--sunk);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<main class="solo">
+  <div><h1>端末内AIの試験</h1>
+    <p class="sub">このパソコンのChromeに内蔵されたGemini Nanoで、やり取りから「決めた項目の値」だけを選べるかを確かめます。文はこのパソコンの外に送りません（このページはAIの処理でサーバーと通信しません）。</p></div>
+
+  <div class="card" id="step1">
+    <h2>1. このChromeで使えるか</h2>
+    <p class="big" id="avail">調べています…</p>
+    <p class="meta" id="availNote"></p>
+    <div class="row"><button class="btn" id="dl" hidden>モデルをダウンロードする（数GB・数分）</button></div>
+    <div class="bar" id="dlbar" hidden><i id="dlfill"></i></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 架空の例文8件で試す</h2>
+    <p class="sub">居酒屋の「予約の受け方」を例に、7項目を決めた選択肢の中から選ばせ、正解と比べます。AIの答えは次の3つで確かめます: ①曜日・時間帯・人数はプログラムが文から直接読む ②それ以外は文の中の根拠の言葉を書き写させ、文にそのまま無ければ使わない ③2回読ませて答えが割れた項目は使わない。</p>
+    <div class="row"><button class="btn" id="run" disabled>試す</button><span class="meta" id="runMsg"></span></div>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 自分の文で試す</h2>
+    <p class="sub">入れた文はこのパソコンの中だけで読みます。結果に出るのは、選択肢から選ばれた値だけです。</p>
+    <label class="meta" for="own">やり取りの文</label>
+    <textarea id="own">ホール：来週土曜の20時、6名で予約したいとお電話です。子供はいません。
+店主：その時間は2回転目の予約があるから、お断りして。</textarea>
+    <div class="row"><button class="btn" id="runOwn" disabled>読み取る</button><span class="meta" id="ownMsg"></span></div>
+    <pre class="code" id="ownOut" hidden></pre>
+  </div>
+
+  <p class="meta">うまく動かないとき: Chrome 148以降のパソコン版が要ります。<code>chrome://on-device-internals</code> でモデルの状態を確かめられます。スマホ・iPadのSafariでは使えません。</p>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // 決めた項目と選択肢（ここから選んだ値しか外に出さない）
+  const FIELDS = {
+    "曜日": ["平日", "金土", "不明"],
+    "時間帯": ["19時前", "19時以降", "不明"],
+    "人数": ["5名以下", "6〜10名", "11名以上", "不明"],
+    "子連れ": ["あり", "なし", "不明"],
+    "2回転目": ["あり", "なし", "不明"],
+    "決めた人": ["店主", "スタッフ", "まだ決まっていない"],
+    "判断": ["受ける", "断る", "店主に回す", "決まっていない"],
+  };
+  const UNKNOWN = new Set(["不明", "決まっていない", "まだ決まっていない"]);
+  // 数字・曜日で決まる項目は、決まったプログラムが文から直接読む（AIの答えより優先）
+  const BY_PROGRAM = new Set(["曜日", "時間帯", "人数"]);
+  // それ以外の値と、決めた人・判断には「根拠」（文の中の言葉をそのまま）を付けさせ、プログラムが照合する
+  const QUOTED = Object.keys(FIELDS).filter((k) => !BY_PROGRAM.has(k) && k !== "判断");
+  const SCHEMA = {
+    type: "object",
+    properties: {
+      ...Object.fromEntries(Object.entries(FIELDS).map(([k, v]) => [k, { type: "string", enum: v }])),
+      ...Object.fromEntries(QUOTED.map((k) => [`根拠_${k}`, { type: "string" }])),
+    },
+    required: [...Object.keys(FIELDS), ...QUOTED.map((k) => `根拠_${k}`)],
+    additionalProperties: false,
+  };
+  const SYSTEM = `あなたは居酒屋の予約のやり取りを読み、決められた項目の値を選択肢から選ぶ係です。
+項目: ${Object.entries(FIELDS).map(([k, v]) => `${k}（${v.join("・")}）`).join("、")}
+- 書かれていないことは「不明」。推測しない
+- 2回転目: 「後の予約が入っている」「2回転目がある」は「あり」。「後の予約は入っていない」「その後の予約はありません」は「なし」。書かれていなければ「不明」
+- 決めた人: 店主の返事やメモで決まったなら「店主」。スタッフが自分で決めて報告しているなら「スタッフ」。
+  スタッフが質問しているだけで、店主がまだ返事をしていなければ必ず「まだ決まっていない」
+- 判断: 決めた人が「まだ決まっていない」なら、必ず「決まっていない」を選ぶ。推測で決めない
+- 根拠_○○ には、その値を選んだ理由になる言葉を、文から一字も変えずにそのまま書き写す。
+  根拠_決めた人 には、決めた人が判断を言った言葉をそのまま書き写す。「不明」「まだ決まっていない」のときは空にする`;
+
+  // 架空の例文と正解
+  const CASES = [
+    ["ホール木村：土曜20時に8名の電話です。\n店主：2回転目の予約が入ってるから断って。", { "曜日": "金土", "時間帯": "19時以降", "人数": "6〜10名", "子連れ": "不明", "2回転目": "あり", "決めた人": "店主", "判断": "断る" }],
+    ["店主メモ：金曜19時半に7名、受けた。後の予約は入っていない。", { "曜日": "金土", "時間帯": "19時以降", "人数": "6〜10名", "子連れ": "不明", "2回転目": "なし", "決めた人": "店主", "判断": "受ける" }],
+    ["ホール：火曜18時に3名、子連れです。\n店主：いいよ。", { "曜日": "平日", "時間帯": "19時前", "人数": "5名以下", "子連れ": "あり", "2回転目": "不明", "決めた人": "店主", "判断": "受ける" }],
+    ["鈴木さんから、水曜20時に4名で、と電話がありました。\n店主：平日の夜は空いてるから受けて。", { "曜日": "平日", "時間帯": "19時以降", "人数": "5名以下", "子連れ": "不明", "2回転目": "不明", "決めた人": "店主", "判断": "受ける" }],
+    ["ホール：月曜17時に2名、子供なしです。どうしますか？", { "曜日": "平日", "時間帯": "19時前", "人数": "5名以下", "子連れ": "なし", "2回転目": "不明", "決めた人": "まだ決まっていない", "判断": "決まっていない" }],
+    ["ホール木村：金曜19時に12名の宴会の問い合わせです。\n店主：人数が多いから、受ける前に私に確認して。", { "曜日": "金土", "時間帯": "19時以降", "人数": "11名以上", "子連れ": "不明", "2回転目": "不明", "決めた人": "店主", "判断": "店主に回す" }],
+    ["店主メモ：木曜18時半、子連れ5名。座敷が空いてたので受けた。", { "曜日": "平日", "時間帯": "19時前", "人数": "5名以下", "子連れ": "あり", "2回転目": "不明", "決めた人": "店主", "判断": "受ける" }],
+    ["ホール：土曜21時に9名、その後の予約はありません。\n店主：じゃあ受けて。", { "曜日": "金土", "時間帯": "19時以降", "人数": "6〜10名", "子連れ": "不明", "2回転目": "なし", "決めた人": "店主", "判断": "受ける" }],
+  ];
+
+  const OPTS = { expectedInputs: [{ type: "text", languages: ["ja"] }], expectedOutputs: [{ type: "text", languages: ["ja"] }] };
+  const LM = window.LanguageModel || (window.ai && window.ai.languageModel);
+  let session = null;
+
+  async function check() {
+    if (!LM) {
+      $("avail").textContent = "このブラウザでは使えません";
+      $("availNote").textContent = "Chrome内蔵AI（Prompt API）が見つかりません。パソコン版Chromeの最新版で開いてください。";
+      return;
+    }
+    let a;
+    try { a = await (LM.availability ? LM.availability(OPTS) : LM.capabilities().then((c) => c.available)); }
+    catch (e) { a = "unavailable"; $("availNote").textContent = e.message; }
+    const word = { available: "使えます", readily: "使えます", downloadable: "ダウンロードすれば使えます", "after-download": "ダウンロードすれば使えます", downloading: "ダウンロード中です", unavailable: "このパソコンでは使えません", no: "このパソコンでは使えません" }[a] || a;
+    $("avail").textContent = word;
+    if (a === "downloadable" || a === "after-download" || a === "downloading") $("dl").hidden = false;
+    if (a === "available" || a === "readily") ready();
+    if (a === "unavailable" || a === "no") $("availNote").textContent ||= "パソコンの性能や空き容量が足りない可能性があります。chrome://on-device-internals で理由を確かめられます。";
+  }
+
+  async function makeSession(withProgress) {
+    return LM.create({
+      ...OPTS,
+      initialPrompts: [{ role: "system", content: SYSTEM }],
+      monitor(m) {
+        if (!withProgress) return;
+        m.addEventListener("downloadprogress", (e) => { $("dlbar").hidden = false; $("dlfill").style.width = `${Math.round((e.loaded || 0) * 100)}%`; });
+      },
+    });
+  }
+
+  function ready() { $("run").disabled = false; $("runOwn").disabled = false; }
+
+  // ---- 決まったプログラムで読む部分 ----
+  const DAY = "日月火水木金土";
+  function readByProgram(text) {
+    const out = {};
+    const days = [...new Set([...text.matchAll(/([月火水木金土日])曜/g)].map((m) => m[1]))];
+    if (days.length === 1) out["曜日"] = "金土".includes(days[0]) ? "金土" : "平日";
+    const hours = [...new Set([...text.matchAll(/(\d{1,2})時/g)].map((m) => Number(m[1])))];
+    if (hours.length === 1) out["時間帯"] = hours[0] < 19 ? "19時前" : "19時以降";
+    const counts = [...text.matchAll(/(\d{1,3})\s*(名|人)/g)].map((m) => Number(m[1]));
+    if (counts.length === 1) { const n = counts[0]; out["人数"] = n <= 5 ? "5名以下" : n <= 10 ? "6〜10名" : "11名以上"; }
+    return out;
+  }
+  const norm = (t) => String(t || "").replace(/\s+/g, "");
+  const quoteOk = (q, text) => !!q && norm(text).includes(norm(q)) && !/[？?]\s*$/.test(q);
+
+  async function readOnce(text) {
+    if (!session) session = await makeSession(false);
+    const s = await session.clone();
+    try { return JSON.parse(await s.prompt(text, { responseConstraint: SCHEMA })); }
+    finally { s.destroy && s.destroy(); }
+  }
+
+  async function extract(text) {
+    const t0 = performance.now();
+    // 2回読ませ、答えが割れた項目は使わない
+    const [a, b] = [await readOnce(text), await readOnce(text)];
+    const out = {}, notes = {};
+    for (const k of Object.keys(FIELDS)) {
+      out[k] = a[k] === b[k] ? a[k] : (k === "決めた人" ? "まだ決まっていない" : k === "判断" ? "決まっていない" : "不明");
+      if (a[k] !== b[k]) notes[k] = "2回の答えが割れた";
+    }
+    // 根拠の照合: 文の中にそのまま無い・質問で終わる根拠は認めない
+    for (const k of QUOTED) {
+      const unknown = k === "決めた人" ? "まだ決まっていない" : "不明";
+      if (out[k] !== unknown && !(quoteOk(a[`根拠_${k}`], text) || quoteOk(b[`根拠_${k}`], text))) {
+        out[k] = unknown; notes[k] = "根拠が文の中に無い";
+      }
+    }
+    // 数字・曜日はプログラムが読んだ値を使う（読めなければ不明）
+    const prog = readByProgram(text);
+    for (const k of BY_PROGRAM) {
+      const v = prog[k] || "不明";
+      if (out[k] !== v) notes[k] = `プログラムが直した（AI: ${out[k]}）`;
+      out[k] = v;
+    }
+    // 決めた人がいないのに判断が入っていたら、判断を取り消す
+    let guarded = false;
+    if (out["決めた人"] === "まだ決まっていない" && out["判断"] !== "決まっていない") { out["判断"] = "決まっていない"; guarded = true; }
+    for (const [k, v] of Object.entries(out)) if (!FIELDS[k].includes(v)) throw new Error(`選択肢に無い値: ${k}`);
+    return { out, notes, guarded, ms: Math.round(performance.now() - t0) };
+  }
+
+  $("dl").addEventListener("click", async () => {
+    $("dl").disabled = true; $("avail").textContent = "ダウンロードしています…";
+    try { session = await makeSession(true); $("avail").textContent = "使えます"; $("dl").hidden = true; $("dlbar").hidden = true; ready(); }
+    catch (e) { $("avail").textContent = "ダウンロードできませんでした"; $("availNote").textContent = e.message; $("dl").disabled = false; }
+  });
+
+  $("run").addEventListener("click", async () => {
+    $("run").disabled = true; $("result").innerHTML = "";
+    let okCells = 0, cells = 0, totalMs = 0, unknownMiss = 0, wrongMiss = 0, guards = 0;
+    const rows = [];
+    for (let i = 0; i < CASES.length; i++) {
+      $("runMsg").textContent = `${i + 1} / ${CASES.length} 件目を読んでいます…`;
+      const [text, want] = CASES[i];
+      let got, ms;
+      let guarded = false, notes = {};
+      try { ({ out: got, ms, guarded, notes } = await extract(text)); } catch (e) { got = {}; ms = 0; rows.push(`<tr><td>${i + 1}</td><td colspan="9" class="ng">${esc(e.message)}</td></tr>`); continue; }
+      totalMs += ms; if (guarded) guards++;
+      const tds = Object.keys(FIELDS).map((k) => {
+        cells++; const ok = got[k] === want[k]; if (ok) okCells++;
+        else if (UNKNOWN.has(got[k])) unknownMiss++; else wrongMiss++;
+        const kind = ok ? "" : UNKNOWN.has(got[k]) ? "（分からないと答えた）" : "（間違った値を作った）";
+        return `<td class="${ok ? "ok" : "ng"}">${esc(got[k])}${ok ? "" : `<br><span class="meta">正解: ${esc(want[k])}${kind}</span>`}${guarded && k === "判断" ? `<br><span class="pill p-warn">歯止めで取り消し</span>` : ""}${notes[k] ? `<br><span class="pill p-gray">${esc(notes[k])}</span>` : ""}</td>`;
+      }).join("");
+      rows.push(`<tr><td class="num">${i + 1}</td><td>${esc(text).replace(/\n/g, "<br>")}</td>${tds}<td class="num">${ms}ms</td></tr>`);
+    }
+    $("runMsg").textContent = "";
+    $("result").innerHTML = `<p class="big">${cells}項目中 ${okCells}項目が正解（${Math.round(okCells / Math.max(1, cells) * 100)}%）・1件あたり平均 ${Math.round(totalMs / CASES.length)}ms</p>
+      <p>外れ: <b>間違った値を作った ${wrongMiss}件</b>（0件であることが一番大事）・分からないと答えた ${unknownMiss}件・歯止めで判断を取り消した ${guards}件</p>
+      <div class="tablewrap"><table><thead><tr><th>#</th><th>文（架空）</th>${Object.keys(FIELDS).map((k) => `<th>${esc(k)}</th>`).join("")}<th>時間</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+    $("run").disabled = false;
+  });
+
+  $("runOwn").addEventListener("click", async () => {
+    $("runOwn").disabled = true; $("ownMsg").textContent = "読んでいます…";
+    try { const { out, ms } = await extract($("own").value); $("ownOut").hidden = false; $("ownOut").textContent = JSON.stringify(out, null, 2); $("ownMsg").textContent = `${ms}ms・このパソコンの中だけで読みました`; }
+    catch (e) { $("ownMsg").textContent = e.message; }
+    $("runOwn").disabled = false;
+  });
+
+  check();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "untangle-browser-tests",
+  "private": true,
+  "description": "ブラウザ側の部品（伏せる処理・送ったメールの分け方）のテスト用。本番のブラウザは CDN から kuromoji を読む",
+  "scripts": { "test": "node --test tests/js/*.test.mjs" },
+  "devDependencies": { "kuromoji": "0.1.2" }
+}
