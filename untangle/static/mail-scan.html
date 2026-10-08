@@ -31,11 +31,11 @@
   .b-you{color:var(--ruri);border-color:var(--ruri)}
   .b-wait{color:var(--ok);border-color:var(--ok)}
   .segs{display:grid;grid-template-columns:repeat(5,1fr);gap:0}
-  .seg{all:unset;cursor:pointer;position:relative;display:flex;flex-direction:column;gap:0;padding:10px 22px 10px 26px;min-width:0;
+  .seg{all:unset;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;padding:10px 22px 10px 26px;min-width:0;
     clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);margin-right:-10px}
   .seg:first-child{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);padding-left:14px;border-radius:10px 0 0 10px}
   .seg:last-child{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,14px 50%);margin-right:0;border-radius:0 10px 10px 0}
-  .seg .n{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+  .seg .n{font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25;margin:2px 0}
   .seg .lbl{font-weight:700;font-size:.86rem;line-height:1.35}
   .seg .sub{font-size:.68rem;color:var(--muted);line-height:1.35}
   .s-check,.s-decide,.s-fix{background:var(--ruri-soft)}
@@ -132,29 +132,35 @@
   <div><h1>判断のテーマ</h1>
     <p class="sub">スタッフが送ったメールから、ひな形に書き足した判断を見つけ、決裁者が決まりにして、決まりどおりに返せているかを見張ります。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
 
-  <div class="card">
-    <h2>1. Gmailにログイン（読み取りだけ）</h2>
+  <!-- 本物のメールを使うとき（?real=1）だけ、最初にログインを出し、済んだら消す -->
+  <div class="card" id="loginCard" hidden>
+    <h2>Gmailにログイン（読み取りだけ）</h2>
     <div class="row"><button class="btn" id="login">Googleでログイン</button><span class="meta" id="who"></span></div>
     <p class="meta">「このアプリは確認されていません」と出たら、自分で作ったアプリなので「続行」を押してください。権限は読み取りだけで、送信・削除はできません。</p>
   </div>
 
-  <div class="card">
-    <h2>2. 読むメール</h2>
-    <label class="meta" for="q">Gmailの検索条件</label>
-    <input id="q" value="in:sent newer_than:90d">
-    <label class="meta" for="limit">読む通数（新しいほうから）</label>
-    <select id="limit"><option>200</option><option selected>500</option><option>1000</option><option>2000</option></select>
-    <details class="keep"><summary class="meta">伏せない言葉（お店の名前・地名など）</summary>
-      <p class="meta">名前・会社名・地名と、辞書に無い言葉は全部伏せます。お店の自動送信メールの決まり文句に出てくる言葉は伏せません。ほかに伏せたくない言葉があれば、読点（、）で区切って書いてください。</p>
-      <input id="keepWords" placeholder="例: 店名、地名"></details>
-    <details class="keep"><summary class="meta">このお店の設定（署名・自動送信）</summary>
-      <p class="meta">署名の店名の行（例: ○○工房）と社内のメールアドレスは、読んだメールから自動で見つけます。違っていたら書いてください。自動で送っている確定メールの署名（例: 予約デスク）は、自動では見分けられないので書いてください。</p>
-      <label class="meta" for="autoSigners">自動送信の署名（読点で区切って複数）</label><input id="autoSigners" placeholder="例: 予約デスク">
-      <label class="meta" for="shopLine">署名の店名の行（空なら自動）</label><input id="shopLine" placeholder="自動で見つけます">
-      <label class="meta" for="internalDomains">社内のメールアドレスのドメイン（空なら差出人から自動）</label><input id="internalDomains" placeholder="例: @example.co.jp">
-      <p class="meta" id="detected"></p></details>
+  <div class="card" id="readCard">
+    <div id="realFields" hidden>
+      <h2>読むメール</h2>
+      <label class="meta" for="q">Gmailの検索条件</label>
+      <input id="q" value="in:sent newer_than:90d">
+      <label class="meta" for="limit">読む通数（新しいほうから）</label>
+      <select id="limit"><option>200</option><option selected>500</option><option>1000</option><option>2000</option></select>
+      <details class="keep"><summary class="meta">伏せない言葉（お店の名前・地名など）</summary>
+        <p class="meta">名前・会社名・地名と、辞書に無い言葉は全部伏せます。お店の自動送信メールの決まり文句に出てくる言葉は伏せません。ほかに伏せたくない言葉があれば、読点（、）で区切って書いてください。</p>
+        <input id="keepWords" placeholder="例: 店名、地名"></details>
+      <details class="keep"><summary class="meta">このお店の設定（署名・自動送信）</summary>
+        <p class="meta">署名の店名の行（例: ○○工房）と社内のメールアドレスは、読んだメールから自動で見つけます。違っていたら書いてください。自動で送っている確定メールの署名（例: 予約デスク）は、自動では見分けられないので書いてください。</p>
+        <label class="meta" for="autoSigners">自動送信の署名（読点で区切って複数）</label><input id="autoSigners" placeholder="例: 予約デスク">
+        <label class="meta" for="shopLine">署名の店名の行（空なら自動）</label><input id="shopLine" placeholder="自動で見つけます">
+        <label class="meta" for="internalDomains">社内のメールアドレスのドメイン（空なら差出人から自動）</label><input id="internalDomains" placeholder="例: @example.co.jp">
+        <p class="meta" id="detected"></p></details>
+    </div>
+    <div class="row">
+      <button class="btn" id="run" disabled hidden>読んで分ける</button>
+      <button class="btn" id="demo">架空の店のメールを読み込む</button>
+      <span class="meta" id="msg"></span></div>
     <p class="meta" id="dict">辞書を読み込んでいます（初めてのときは十数秒かかります）…</p>
-    <div class="row"><button class="btn" id="run" disabled>読んで分ける</button><button class="btn ghost" id="demo">架空の店で試す（途中まで進んだ状態）</button><button class="btn ghost small" id="demoFresh">架空のメールを最初から分ける</button><span class="meta" id="msg"></span></div>
     <div class="bar" id="bar" hidden><i id="fill"></i></div>
   </div>
 
@@ -173,6 +179,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let token = null, client = null, results = null, hideNames = true;
+  const REAL = new URLSearchParams(location.search).has("real");   // 本物のメールを使うとき（?real=1）
 
   // ログインの保持: 約1時間で切れる鍵だけを、このブラウザの中に期限つきで残す（サーバーには送らない）。
   // 長く使える鍵は受け取らない（サーバーで預かる作りになり、「サーバーを通さない」に反するため）
@@ -180,7 +187,10 @@
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
   const saved = store.get("untangle-gmail-token");
   if (saved && saved.exp > Date.now() + 60000) { token = saved.token; ready("ログインしています（このブラウザに期限つきで保持）"); }
-  function ready(text) { $("who").textContent = text; $("run").disabled = false; $("login").textContent = "ログインし直す"; }
+  function ready(text) { $("who").textContent = text; $("run").disabled = false; $("login").textContent = "ログインし直す"; if (REAL) showReal(); }
+  // ふだん（審査・見学）は架空の店のメールだけ。本物のメールは ?real=1 で、最初にログイン → 済んだら読み込みの画面
+  function showReal() { $("loginCard").hidden = true; $("readCard").hidden = false; $("realFields").hidden = false; $("run").hidden = false; $("demo").hidden = true; }
+  if (REAL) { $("loginCard").hidden = false; $("readCard").hidden = true; }
 
   let pending = null;
   function signIn(silent) {
@@ -435,12 +445,13 @@
     $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通で試しています（実在のお客様とは関係ありません）`;
     try {
       if (fresh) { forgetGroups(); await render(); return; }
+      await fetch("/api/demo/reset", { method: "POST", headers: headers() }).catch(() => {});   // 試しの場を空にして、いつも同じ状態から
       store.set(SAVE_KEY(), { savedAt: Date.now() - 86400000, groups: window.MAIL_SCAN_DEMO_SEED, noJudgment: [], held: [] });
       await prepare(); await restoreGroups();
       $("msg").textContent = "架空の店の、途中まで進んだ状態を用意しています…";
       for (const g of groups) if (g.seed && g.seed.adopt) await seedAdopt(g);
       saveGroups();
-      $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通・途中まで進んだ状態です（実在のお客様とは関係ありません）。「最初から分ける」では Gemini で分けるところから試せます`;
+      $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通・途中まで進んだ状態です（実在のお客様とは関係ありません）`;
       await render();
     } catch (e) { $("msg").textContent = e.message; }
   }
@@ -469,7 +480,6 @@
     }
   }
   $("demo").addEventListener("click", () => startDemo(false));
-  $("demoFresh").addEventListener("click", () => startDemo(true));
 
   async function prepare() {
     const picks = results.filter((r) => !r.auto && (r.kind === "書き足し" || r.kind === "返信での判断" || r.kind === "別の型"));
@@ -759,9 +769,9 @@
     if (!DASH_BY[dashState]) dashState = "all";
     // 5つの段を矢印でつないだ1本の流れ。「あとで決める」は決め方から外れる枝、「すべて」は絞り込みを外すボタン
     const seg = (k) => { const d = DASH_BY[k]; return `<button class="seg s-${k}" aria-pressed="${dashState === k}" data-dash="${k}">
-      <span class="n">${counts[k] || 0}</span><span class="lbl">${esc(d.lbl)}</span><span class="sub">${esc(d.sub)}</span></button>`; };
+      <span class="lbl">${esc(d.lbl)}</span><span class="n">${counts[k] || 0}</span><span class="sub">${esc(d.sub)}</span></button>`; };
     const buttons = `<div class="flow">
-      <button class="fall" aria-pressed="${dashState === "all"}" data-dash="all"><span class="n">${live.length}</span><span class="lbl">すべて</span></button>
+      <button class="fall" aria-pressed="${dashState === "all"}" data-dash="all"><span class="lbl">すべて</span><span class="n">${live.length}</span></button>
       <div class="pipe">
         <div class="band"><span class="b-you">あなたの番</span><span class="b-wait">待つだけ</span></div>
         <div class="segs">${["check", "decide", "fix", "watch", "done"].map(seg).join("")}</div>
@@ -777,7 +787,9 @@
       const s = g.status, watched = s ? Math.max(0, s.window - s.remaining) : 0;
       const meter = st === "watch" && s ? `<div class="meter">決まりどおりの返事 <div class="mbar"><i style="width:${Math.min(100, (watched / s.window) * 100)}%"></i></div><b>${watched} / ${s.window}通</b></div>` : "";
       const people = new Set(itemsOf(g.refs).map((it) => it.staff)).size;
-      const facts = [`実例 ${total(g)}通${(g.keptIds || []).length ? `（今回の期間に${g.refs.length}通）` : ""}`, `スタッフ ${people}人`, g.adopted ? `決まり ${(g.adopted.results || []).length}条` : "", s && s.released ? `第${s.released}版` : ""].filter(Boolean).map((x) => `<span>${x}</span>`).join("");
+      const readIds = new Set(results.map((r) => r.id));
+      const outsideN = (g.keptIds || []).filter((id) => !readIds.has(id)).length;   // 今回読んだ範囲の外にある例だけ
+      const facts = [`実例 ${total(g)}通${outsideN ? `（うち${outsideN}通は今回読んだ範囲の外）` : ""}`, `スタッフ ${people}人`, g.adopted ? `決まり ${(g.adopted.results || []).length}条` : "", s && s.released ? `第${s.released}版` : ""].filter(Boolean).map((x) => `<span>${x}</span>`).join("");
       return `<button class="tcard" data-open="${gi}">
         <div class="ttop"><div><h3>${esc(g.name)}</h3><div class="meta">${esc(g.situation || "")}</div></div><span class="chip c-${st}">${esc(d.lbl)}</span></div>
         <div class="steps">${bars}</div><div class="steplbl">${lbls}</div>${meter}<div class="facts">${facts}</div>
