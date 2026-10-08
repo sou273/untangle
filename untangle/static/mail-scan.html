@@ -10,8 +10,7 @@
   .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
   .brandline{display:flex;align-items:baseline;gap:8px}
   .brandline .brand{font-family:var(--display);font-size:1.25rem}
-  .wsbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;flex:1;min-width:0}
-  .toRules{color:var(--ruri);font-weight:700;text-decoration:none;font-size:.85rem}
+  .toRules{color:var(--ruri);font-weight:700;text-decoration:none;font-size:.85rem;margin-left:auto}
   .toRules:hover{text-decoration:underline}
   main.solo{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:24px 60px;display:flex;flex-direction:column;gap:16px}
   .big{font-size:1.05rem;font-weight:700}
@@ -127,7 +126,6 @@
 <body>
 <main class="solo">
   <div class="topbar"><div class="brandline"><span class="brand">Untangle</span><span class="meta">判断の引き継ぎ</span></div>
-    <div class="wsbox" id="wsbox"></div>
     <a class="toRules" href="/rules">条文と出口（団体予約のデモ）›</a></div>
   <div><h1>判断のテーマ</h1>
     <p class="sub">スタッフが送ったメールから、ひな形に書き足した判断を見つけ、決裁者が決まりにして、決まりどおりに返せているかを見張ります。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
@@ -335,35 +333,6 @@
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const lsSet = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
   if (location.hash.startsWith("#ws-")) { lsSet("untangle-ws", location.hash.slice(4)); lsSet("untangle-mode", "ws"); history.replaceState(null, "", location.pathname); }
-  async function renderWs() {
-    const box = $("wsbox"), ws = lsGet("untangle-ws");
-    if (ws && lsGet("untangle-mode") !== "demo") {
-      let shop = "";
-      try { const r = await fetch("/api/workspace", { headers: { "X-Untangle-Workspace": ws } }); const b = await r.json(); shop = b.shop || ""; } catch (_) {}
-      box.innerHTML = `<span class="meta">作業場</span> <b>${esc(shop || "（読み込めませんでした）")}</b>
-        <button class="btn ghost small" id="wsCopy">別の端末で開くリンクをコピー</button><span class="meta" id="wsMsg"></span>`;
-      $("wsCopy").addEventListener("click", async () => {
-        const url = `${location.origin}/#ws-${ws}`;
-        try { await navigator.clipboard.writeText(url); $("wsMsg").textContent = "コピーしました。このリンクを知っている人だけが開けます"; }
-        catch (_) { $("wsMsg").textContent = url; }
-      });
-    } else {
-      box.innerHTML = `<span class="meta">作業場がありません（決まりを残すには要ります）</span>
-        <input id="wsShop" placeholder="店の名前" style="max-width:180px"><button class="btn small" id="wsMake">作業場を作る</button><span class="meta" id="wsMsg"></span>`;
-      $("wsMake").addEventListener("click", async () => {
-        const shop = $("wsShop").value.trim();
-        if (!shop) { $("wsMsg").textContent = "店の名前を書いてください"; return; }
-        try {
-          const r = await fetch("/api/workspaces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shop }) });
-          const b = await r.json();
-          if (!r.ok) throw new Error(b.detail || `作れませんでした（${r.status}）`);
-          lsSet("untangle-ws", b.id); lsSet("untangle-mode", "ws"); renderWs();
-        } catch (e) { $("wsMsg").textContent = e.message; }
-      });
-    }
-  }
-  renderWs();
-
   // このお店の設定（このブラウザに残す）。空の項目はメールから自動で見つける
   const DEMO_SETTINGS = { autoSigners: ["予約デスク"] };
   const list = (v) => String(v || "").split(/[、,，\s]+/).map((x) => x.trim()).filter(Boolean);
@@ -894,13 +863,11 @@
       cards.push(`<div class="pattern">${head}${pts.join("")}
         <div class="row"><button class="btn small" data-s2="adopt" data-g="${gi}">${g.adopted ? "この答えで決め直す" : "この答えで決まりにする"}</button><span class="meta" id="s2msg-${gi}"></span></div>${done}</div>`);
     }
-    const needWs = source === "gmail" && !hasWorkspace();
     return `<div class="card"><h2>4. 決め方を決める（第2段）</h2>
       <div class="todo"><b>やること</b>
         <ol><li>［合っている］を押したパターンごとに［決めることを並べる］を押してください。実例に出た答え方が、件数つきで並びます。</li>
         <li>問いごとに答えを選んでください。実例の答え方のどれか・自分で書く・いまは決めない、から選べます。</li>
         <li>［この答えで決まりにする］を押すと、Untangle の決まり（第何条）になり、これまでの実例で当て直した結果が出ます。</li></ol></div>
-      ${needWs ? `<p class="big">決まりを残すには作業場が要ります。ページの一番上の［作業場を作る］を押してください。</p>` : ""}
       ${cards.join("")}</div>`;
   }
 
@@ -928,7 +895,6 @@
       });
       else if (act === "adopt") el.addEventListener("click", async () => {
         const msg = $(`s2msg-${gi}`);
-        if (source === "gmail" && !hasWorkspace()) { msg.textContent = "先に Untangle の作業場を作ってください（上の案内）"; return; }
         const points = [];
         for (const [i, pt] of g.points.entries()) {
           const a = (g.answers || {})[i] || {};
