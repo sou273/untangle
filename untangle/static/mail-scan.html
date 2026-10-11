@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <style>
+  [hidden]{display:none!important}   /* .card などの表示指定より、隠す指定を優先する */
   .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
   .brandline{display:flex;align-items:baseline;gap:8px}
   .brandline .brand{font-family:var(--display);font-size:1.25rem}
@@ -159,7 +160,7 @@
     </div>
     <div class="row">
       <button class="btn" id="run" disabled hidden>読んで分ける</button>
-      <button class="btn" id="demo">架空の店のメールを読み込む</button>
+      <button class="btn ghost" id="demo">最初の状態から読み込み直す</button>
       <span class="meta" id="msg"></span></div>
     <p class="meta" id="dict">辞書を読み込んでいます（初めてのときは十数秒かかります）…</p>
     <div class="bar" id="bar" hidden><i id="fill"></i></div>
@@ -452,6 +453,8 @@
     }
   }
   $("demo").addEventListener("click", () => startDemo(false));
+  // ふだんのページ（審査・見学）は、開いたらすぐ架空の店のメールを読み込んでダッシュボードを出す（Gemini は呼ばない）
+  if (!REAL) setTimeout(() => startDemo(false), 0);   // スクリプトをすべて読み終えてから
 
   async function prepare() {
     const picks = results.filter((r) => !r.auto && (r.kind === "書き足し" || r.kind === "返信での判断" || r.kind === "別の型"));
@@ -773,7 +776,7 @@
     const nj = grouped.no_judgment.length + prepared.noJudgment.length;
     return `<div class="card"><div class="spread"><h2>判断のテーマ</h2><span class="meta">送ったメール ${results.length}通から ${live.length}テーマ</span></div>
       <p class="meta">上のボタンで状態ごとに絞り込めます。カードを押すと、そのテーマの画面に入ります。判断の無い返事 ${nj}通・自動送信は外しています。${grouped.held && grouped.held.length ? `伏せ残りの疑いで送らなかった文 ${grouped.held.length}通。` : ""}</p>
-      ${grouped.restoredAt ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果から続けています。<button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
+      ${grouped.restoredAt && source === "gmail" ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果から続けています。<button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
       ${(() => { const n = newItems().length; return n ? `<div class="row"><button class="btn small" id="groupNew">新しく送ったメール ${n}通をパターンに分ける</button><span class="meta" id="newmsg">どのテーマにも見張りにも入らなかった、前回より後の返事です。新しいテーマは「分け方を確かめる」に入ります。</span></div>` : ""; })()}
       <div class="agentcard"><div class="spread"><b>エージェントの巡回</b><span class="meta">メールを読み込むたびに自動で</span></div><div id="agentBox">${agentHtmlBody()}</div></div>
       ${buttons}
