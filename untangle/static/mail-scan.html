@@ -24,11 +24,17 @@
   .fall .lbl{font-size:.8rem;font-weight:700}
   .fall[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
   .pipe{flex:1;min-width:0;display:grid;gap:4px}
-  .band{display:grid;grid-template-columns:3fr 1fr 1fr;gap:6px;font-size:.7rem;font-weight:700}
+  .transfer{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;background:var(--surface)}
+  .transfer.ready{border-color:var(--ok);background:var(--ok-soft)}
+  .tbar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:6px 0}
+  .tbar i{display:block;height:100%;background:var(--ok)}
+  .manual{border-top:1px solid var(--line);margin-top:8px;padding-top:4px}
+  .manual h3{margin:12px 0 4px}
+  .band{display:grid;grid-template-columns:3fr 1fr;gap:6px;font-size:.7rem;font-weight:700}
   .band span{border-top:2px solid;padding-top:2px}
   .b-you{color:var(--ruri);border-color:var(--ruri)}
   .b-wait{color:var(--ok);border-color:var(--ok)}
-  .segs{display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+  .segs{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
   .seg{all:unset;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;padding:10px 22px 10px 26px;min-width:0;
     clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);margin-right:-10px}
   .seg:first-child{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);padding-left:14px;border-radius:10px 0 0 10px}
@@ -38,9 +44,8 @@
   .seg .sub{font-size:.68rem;color:var(--muted);line-height:1.35}
   .s-check,.s-decide,.s-fix{background:var(--ruri-soft)}
   .s-check .n,.s-decide .n,.s-fix .n{color:var(--ruri)}
-  .s-watch{background:var(--ok-soft)}
-  .s-done{background:var(--line)}
-  .s-watch .n,.s-done .n{color:var(--ok)}
+  .s-done{background:var(--ok-soft)}
+  .s-done .n{color:var(--ok)}
   .seg:hover{filter:brightness(.96)}
   .seg[aria-pressed="true"]{background:var(--ruri);color:var(--ruri-ink)}
   .seg[aria-pressed="true"] .n,.seg[aria-pressed="true"] .sub{color:var(--ruri-ink)}
@@ -72,16 +77,15 @@
   .chip{flex:none;font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
   .c-check,.c-decide{background:var(--ruri-soft);color:var(--ruri)}
   .c-fix{background:var(--warn-soft);color:var(--warn)}
-  .c-watch{background:var(--ok-soft);color:var(--ok)}
   .c-done{background:var(--ok);color:#fff}
   .c-later{background:var(--sunk);color:var(--muted)}
-  .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
   .steps span{height:6px;border-radius:999px;background:var(--line)}
   .steps span.done{background:var(--ok)}
   .steps span.now{background:var(--ruri)}
   .steps span.now.fix{background:var(--warn)}
   .steps span.now.later{background:var(--muted)}
-  .steplbl{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:.66rem;color:var(--muted);margin-top:-4px}
+  .steplbl{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:.66rem;color:var(--muted);margin-top:-4px}
   .steplbl b{color:var(--ink)}
   .meter{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:8px}
   .mbar{flex:1;height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
@@ -132,7 +136,7 @@
   <div class="topbar"><div class="brandline"><span class="brand">Untangle</span><span class="meta">判断の引き継ぎ</span></div>
 </div>
   <div><h1>判断のテーマ</h1>
-    <p class="sub">スタッフが送ったメールから、ひな形に書き足した判断を見つけ、決裁者が決まりにして、決まりどおりに返せているかを見張ります。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
+    <p class="sub">スタッフが過去に送ったメールを読み込み、ひな形に書き足された判断を全部テーマに分けます。決裁者が全部のテーマを確かめて決まりにすれば、その業務をスタッフや AI に譲渡できます。<b>メールを読むのも、ひな形からの外れを見つけるのも、名前や番号を伏せるのも、このブラウザの中だけで行います。</b>判断のパターンに分けるときだけ、名前や番号を伏せた後の文を送ります。伏せきれたか確信の持てない行は送りません。</p></div>
 
   <!-- 本物のメールを使うとき（?real=1）だけ、最初にログインを出し、済んだら消す -->
   <div class="card" id="loginCard" hidden>
@@ -413,7 +417,6 @@
 
   // 架空の店で試す: 途中まで進んだ状態（各段にテーマがある）から始める。Gemini は呼ばない
   async function startDemo(fresh) {
-    demoWeeks.length = 0;
     results = MailScan.analyze(window.MAIL_SCAN_DEMO, DEMO_SETTINGS); source = "demo"; showDetected(); prepared = null; grouped = null; groups = null; focus = null; agentLog = null; agentRanFor = null; excluded.clear();
     $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通で試しています（実在のお客様とは関係ありません）`;
     try {
@@ -583,7 +586,7 @@
       groups: groups.map((g) => ({ name: g.name, situation: g.situation, rule: g.rule, variation: g.variation, question: g.question, ok: g.ok, ids: ids(g.refs, g.keptIds),
         points: g.points && g.points.map((pt) => ({ question: pt.question, options: pt.options.map((o) => ({ label: o.label, ids: ids(o.refs, o.keptIds) })) })),
         answers: g.answers, adopted: g.adopted, status: g.status, deferred: g.deferred, resolved: g.resolved, pending: g.pending,
-        watch: g.watch, watchDone: g.watchDone, retell: g.retell, note: g.note })).filter((g) => g.ids.length || g.adopted),
+        note: g.note })).filter((g) => g.ids.length || g.adopted),
       agent: agentLog,
       noJudgment: ids(grouped.no_judgment), held: ids(grouped.held || []) };
     store.set(SAVE_KEY(), data);
@@ -684,58 +687,30 @@
   // ---- ダッシュボード: テーマを状態ごとに並べ、どこまで進んだかを一目で見る ----
   let focus = null;   // 開いているテーマ（groups の番号）。null ならダッシュボード
   let dashState = (() => { try { return localStorage.getItem("untangle-dash-state") || "all"; } catch (_) { return "all"; } })();
-  const STEPS = ["分け方", "決め方", "片付け", "見張り", "完了"];
+  const STEPS = ["分け方", "決め方", "片付け", "完了"];
   const DASH = [
     { key: "all", lbl: "すべて", sub: "全部のテーマ" },
     { key: "check", step: 1, lbl: "分け方を確かめる", sub: "パターンが合っているか", you: true, chip: "you" },
     { key: "decide", step: 2, lbl: "決め方を決める", sub: "実例の答え方から選ぶ", you: true, chip: "you" },
     { key: "fix", step: 3, lbl: "違う答え方の片付け", sub: "これまでの返事を整理", you: true, chip: "fix" },
-    { key: "watch", step: 4, lbl: "見張り中", sub: "決まりどおりの返事を積む", chip: "watch" },
-    { key: "done", step: 5, lbl: "完了", sub: "マニュアルができた", chip: "done" },
+    { key: "done", step: 4, lbl: "完了", sub: "マニュアルができた", chip: "done" },
     { key: "later", step: 2, lbl: "あとで決める", sub: "いまは決めずに残した", chip: "later" },
   ];
   const DASH_BY = Object.fromEntries(DASH.map((d) => [d.key, d]));
-  // 見張りで見つけた「決まりと違う返事」のうち、まだ選んでいないもの
-  const openWatchDiffers = (g) => Object.entries(g.watch || {}).filter(([id, w]) => !w.none && w.checks.some((c) => c.verdict === "決まりと違う") && !(g.watchDone || {})[id]).length;
   const unresolved = (g) => (g.adopted ? (g.adopted.results || []).filter((r, pi) => (r.differ_items || []).length && !(g.resolved || {})[pi]).reduce((a, r) => a + r.differ_items.length, 0) : 0);
   function stateOf(g) {
     if (!g.ok) return "check";
     if (!g.adopted) return g.deferred ? "later" : "decide";
-    if (unresolved(g) || openWatchDiffers(g)) return "fix";
-    if (g.status && g.status.released) return "done";
-    return "watch";
+    if (unresolved(g)) return "fix";
+    return "done";   // 決まりを作り、決まりと違う過去の返事を片付けたら完了（過去のメールは全部読んでいる）
   }
   function nextText(g, st) {
     if (st === "check") return `${g.refs.length}通の実例を見て、分け方が合っているか確かめる`;
     if (st === "decide") return g.points ? `決めること ${g.points.length}つに答える` : "決めることを並べる";
     if (st === "later") return "いまは決めずに残しています";
-    if (st === "fix") { const a = unresolved(g), b = openWatchDiffers(g); return [a ? `違う答え方をしていた返事 ${a}通を片付ける` : "", b ? `決まりと違う返事 ${b}通に答える` : ""].filter(Boolean).join("・"); }
-    if (st === "done") return "スタッフ向けマニュアルを見る";
-    return "待つだけ。次に読むとき、決まりどおりか確かめます";
+    if (st === "fix") return `違う答え方をしていた過去の返事 ${unresolved(g)}通を片付ける`;
+    return "スタッフ向けマニュアルを見る";
   }
-  // どのテーマにも、判断の無い返事にも、見張りにも入っていない、前回より後に送った返事
-  function newItems() {
-    if (!grouped || !grouped.restoredAt || watching || watchTargets().length) return [];   // 見張りが済んでから数える
-    const known = new Set();
-    const idOf = new Map(prepared.items.map((it) => [it.ref, it.r.id]));
-    for (const g of groups) { g.refs.forEach((r) => known.add(idOf.get(r))); (g.keptIds || []).forEach((id) => known.add(id)); Object.keys(g.watch || {}).forEach((id) => known.add(id)); }
-    [...(grouped.no_judgment || []), ...(grouped.held || [])].forEach((r) => known.add(idOf.get(r)));
-    return prepared.items.filter((it) => !known.has(it.r.id) && it.r.date.getTime() > grouped.restoredAt);
-  }
-  async function groupNewItems(btn) {
-    const items = newItems();
-    btn.disabled = true; $("newmsg").textContent = "分けています（1分ほど）…";
-    try {
-      const res = await fetch("/api/patterns", { method: "POST", headers: headers(), body: JSON.stringify({ items: payload(items) }) });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.detail || `うまくいきませんでした（${res.status}）`);
-      for (const p of body.patterns) groups.push({ ...p, refs: [...p.refs], keptIds: [], idx: 0, ok: false, editing: false });
-      grouped.no_judgment = [...(grouped.no_judgment || []), ...body.no_judgment];
-      grouped.held = [...(grouped.held || []), ...body.held];
-      saveGroups(); await render();
-    } catch (e) { $("newmsg").textContent = e.message; btn.disabled = false; }
-  }
-
   function dashboardHtml() {
     const total = (g) => g.refs.length + (g.keptIds || []).length;
     // 決まりを作る前のテーマは、今回読んだ範囲に例が無いと何もできないので並べない（記録は消さずに残す）
@@ -750,19 +725,18 @@
     const buttons = `<div class="flow">
       <button class="fall" aria-pressed="${dashState === "all"}" data-dash="all"><span class="lbl">すべて</span><span class="n">${live.length}</span></button>
       <div class="pipe">
-        <div class="band"><span class="b-you">あなたの番</span><span class="b-wait">待つだけ</span></div>
-        <div class="segs">${["check", "decide", "fix", "watch", "done"].map(seg).join("")}</div>
+        <div class="band"><span class="b-you">あなたの番</span><span class="b-wait">譲渡できる</span></div>
+        <div class="segs">${["check", "decide", "fix", "done"].map(seg).join("")}</div>
         <div class="branch"><span class="fork" aria-hidden="true">└</span>
           <button class="seg-later" aria-pressed="${dashState === "later"}" data-dash="later"><span class="n">${counts.later || 0}</span> あとで決める <span class="sub">いまは決めずに残した</span></button></div>
       </div></div>`;
-    const order = ["check", "decide", "fix", "watch", "later", "done"];
+    const order = ["check", "decide", "fix", "later", "done"];
     const shown = live.filter(([, g]) => dashState === "all" || stateOf(g) === dashState).sort((a, b) => order.indexOf(stateOf(a[1])) - order.indexOf(stateOf(b[1])));
     const cards = shown.map(([gi, g]) => {
       const st = stateOf(g), d = DASH_BY[st];
       const bars = STEPS.map((_, k) => { const n = k + 1; return `<span class="${n < d.step || st === "done" ? "done" : n === d.step ? `now ${st}` : ""}"></span>`; }).join("");
       const lbls = STEPS.map((x, k) => `<span>${k + 1 === d.step && st !== "done" ? `<b>${x}</b>` : x}</span>`).join("");
-      const s = g.status, watched = s ? Math.max(0, s.window - s.remaining) : 0;
-      const meter = st === "watch" && s ? `<div class="meter">決まりどおりの返事 <div class="mbar"><i style="width:${Math.min(100, (watched / s.window) * 100)}%"></i></div><b>${watched} / ${s.window}通</b></div>` : "";
+      const s = g.status, meter = "";
       const people = new Set(itemsOf(g.refs).map((it) => it.staff)).size;
       const readIds = new Set(results.map((r) => r.id));
       const outsideN = (g.keptIds || []).filter((id) => !readIds.has(id)).length;   // 今回読んだ範囲の外にある例だけ
@@ -774,10 +748,18 @@
         <div class="tnext"><span>${esc(nextText(g, st))}</span><span class="go">開く ›</span></div></button>`;
     }).join("");
     const nj = grouped.no_judgment.length + prepared.noJudgment.length;
+    // 譲渡まで: 過去のメールは全部読んだので、出てきたテーマを全部完了にすれば業務を渡せる
+    const doneN = counts.done || 0, held = (grouped.held || []).length, ready = live.length > 0 && doneN === live.length && !held;
+    const transfer = `<div class="transfer${ready ? " ready" : ""}">
+      <div class="spread"><b>${ready ? "✓ 業務を譲渡できます" : "譲渡まで"}</b><span class="meta">${live.length}テーマ中 <b>${doneN}</b> 完了</span></div>
+      <div class="tbar"><i style="width:${live.length ? (doneN / live.length) * 100 : 0}%"></i></div>
+      <p class="meta">${ready ? "読み込んだ過去のメールに出てきた判断は、すべて決まりになりました。下のマニュアルを渡せば、この業務はスタッフや AI に任せられます。"
+        : `過去のメールに出てきた判断のテーマは、読み込んだ時点で全部ここに並んでいます。全部を完了にすると、業務を譲渡できます。${held ? `伏せ残りの疑いで分けられなかった文 ${held}通も、確かめが要ります。` : ""}`}</p>
+      ${doneN ? `<div class="row"><button class="btn ${ready ? "" : "ghost "}small" id="allManual">${ready ? "譲渡用のマニュアルを見る" : `完了した${doneN}テーマのマニュアルを見る`}</button></div><div id="allManualBox"></div>` : ""}</div>`;
     return `<div class="card"><div class="spread"><h2>判断のテーマ</h2><span class="meta">送ったメール ${results.length}通から ${live.length}テーマ</span></div>
       <p class="meta">上のボタンで状態ごとに絞り込めます。カードを押すと、そのテーマの画面に入ります。判断の無い返事 ${nj}通・自動送信は外しています。${grouped.held && grouped.held.length ? `伏せ残りの疑いで送らなかった文 ${grouped.held.length}通。` : ""}</p>
       ${grouped.restoredAt && source === "gmail" ? `<p class="meta">前回（${new Date(grouped.restoredAt).toLocaleString("ja-JP")}）に分けた結果から続けています。<button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
-      ${(() => { const n = newItems().length; return n ? `<div class="row"><button class="btn small" id="groupNew">新しく送ったメール ${n}通をパターンに分ける</button><span class="meta" id="newmsg">どのテーマにも見張りにも入らなかった、前回より後の返事です。新しいテーマは「分け方を確かめる」に入ります。</span></div>` : ""; })()}
+      ${transfer}
       <div class="agentcard"><div class="spread"><b>エージェントの巡回</b><span class="meta">メールを読み込むたびに自動で</span></div><div id="agentBox">${agentHtmlBody()}</div></div>
       ${buttons}
       ${outside.length ? `<p class="meta">今回読んだ範囲に例の無いテーマが ${outside.length}件あります（決まりを作る前のもの）。読む期間を広げると出ます。</p>` : ""}
@@ -794,7 +776,7 @@
       parts[0] = parts[0] && g.ok ? parts[0] : note;
       if (!g.adopted) parts[1] = note;
     }
-    const now = { check: 0, decide: 1, later: 1, fix: 2, watch: 2, done: 2 }[st];
+    const now = { check: 0, decide: 1, later: 1, fix: 2, done: 2 }[st];
     const others = parts.map((h, i) => (i !== now && h ? h : "")).filter(Boolean).join("");
     return `<div class="themehead"><button class="btn ghost small" id="backDash">‹ テーマの一覧</button>
         <h2>${esc(g.name)}</h2><span class="chip c-${st}">${esc(d.lbl)}</span></div>
@@ -809,8 +791,16 @@
     document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", async () => {
       focus = Number(b.dataset.open); await render(); window.scrollTo({ top: $("out").offsetTop - 12 });
     }));
-    const gn = $("groupNew");
-    if (gn) gn.addEventListener("click", () => groupNewItems(gn));
+    const am = $("allManual");
+    if (am) am.addEventListener("click", async () => {
+      am.disabled = true; $("allManualBox").innerHTML = `<p class="meta">読み込んでいます…</p>`;
+      const done = groups.filter((g) => g.adopted && stateOf(g) === "done");
+      await Promise.all(done.map(loadManual));
+      $("allManualBox").innerHTML = `<div class="manual">${done.map((g) => `<h3>${esc(g.name)}</h3>${g.manual
+        ? g.manual.sections.map((sec) => `<p><b>${esc(sec.title)}</b></p><ul>${sec.items.map((it) => `<li>${esc(it.text)}${it.reason ? `<br><span class="meta">理由: ${esc(it.reason)}</span>` : ""}</li>`).join("")}</ul>`).join("")
+        : `<p class="meta">マニュアルを読み込めませんでした。</p>`}`).join("")}</div>`;
+      am.disabled = false;
+    });
     const back = $("backDash");
     if (back) back.addEventListener("click", async () => { focus = null; await render(); window.scrollTo({ top: $("out").offsetTop - 12 }); });
   }
@@ -933,7 +923,7 @@
     });
   }
 
-  // ---- 第3段: 伝える・見張る ----
+  // ---- 第3段: 片付けて伝える ----
   const itemById = (id) => prepared.items.find((it) => it.r.id === id);
   // 決まりより前の答え方（第2段で「違う答え方」と出た実例）の片付け
   async function cleanupHtml(gi, g) {
@@ -970,82 +960,39 @@
       if (followed.length) lines.push(`　これまで「${[...new Set(followed.map((d) => d.decision))].join("」「")}」と書いた返事が${followed.length}通ありました。今後は「${res.decision}」でお願いします。`);
       for (const a of (done && done.articles) || []) if (a.condition) lines.push(`　ただし、${a.condition}は「${a.decision}」とします。`);
     }
-    for (const r of g.retell || []) lines.push(`・${r.date} に送った返事が決まりと違っていました。今後は決まりどおりでお願いします。`);
     return lines.join("\n");
   }
-  // 見張り: 決まりを作ってから送ったメールが、決まりどおりか
-  function watchTargets() {
-    const adopted = groups.filter((g) => g.adopted);
-    if (!adopted.length) return [];
-    const since = Math.min(...adopted.map((g) => g.adopted.at || Date.now()));
-    const checked = new Set(adopted.flatMap((g) => Object.keys(g.watch || {})));
-    return prepared.items.filter((it) => it.r.date.getTime() > since && !checked.has(it.r.id));
-  }
-  let watching = false;
-  const demoWeeks = [];   // 架空の「次の週」に届いたメール（押すたびに1週ぶん増える）
-  // エージェントの巡回: 読み込むたびに裏で1回。テーマの状態を読み、新しい返事を見張り、決裁者がやることを洗い出してメモを書く
+  // エージェントの巡回: 読み込むたびに裏で1回。テーマの状態を読み、譲渡までに決裁者がやることを洗い出してメモを書く
   let agentLog = null, agentRunning = false, agentRanFor = null;
   async function maybeWatch() {
-    if (watching || agentRunning || !groups) return;
-    const targets = watchTargets();
-    // 同じ読み込みでは1回だけ。新しい返事が来たときだけ巡回し直す（直後の空の巡回で報告を上書きしない）
-    const key = `${results.length}:${grouped && grouped.restoredAt}`;
-    if (agentRanFor === key && !targets.length) return;
-    agentRanFor = key; watching = targets.length > 0; agentRunning = true;
-    const adopted = groups.filter((g) => g.adopted);
+    if (agentRunning || !groups) return;
     const live = groups.filter((g) => g.refs.length || g.adopted);
+    const board = live.map((g) => ({ name: g.name, state: stateOf(g) }));
+    const unsorted = grouped ? (grouped.held || []).length : 0;
+    // 状態が変わったときだけ巡回し直す（同じ状態での空の巡回で報告を上書きしない）
+    const key = JSON.stringify([board, unsorted]);
+    if (agentRanFor === key) return;
+    agentRanFor = key; agentRunning = true;
     if (focus === null && $("agentBox")) $("agentBox").innerHTML = agentHtmlBody();
     try {
-      const rules = adopted.map((g) => ({ name: g.name, situation: g.situation || "", questions: g.adopted.results.map((r) => r.question), decisions: g.adopted.results.map((r) => r.decision) }));
-      const board = live.map((g) => ({ name: g.name, state: stateOf(g), remaining: g.status ? g.status.remaining : null }));
-      const res = await fetch("/api/patterns/agent", { method: "POST", headers: headers(), body: JSON.stringify({ rules, items: payload(targets), board }) });
+      const res = await fetch("/api/patterns/agent", { method: "POST", headers: headers(), body: JSON.stringify({ board, unsorted }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.detail || `巡回がうまくいきませんでした（${res.status}）`);
-      for (const a of adopted) if (body.status && body.status[a.name]) { a.status = body.status[a.name]; a.manual = null; }
-      const byRef = new Map((body.results || []).map((x) => [x.ref, x]));
-      for (const it of targets) {
-        const x = byRef.get(it.ref);
-        const g = x && adopted.find((a) => a.name === x.pattern);
-        for (const a of adopted) a.watch = a.watch || {};
-        if (adopted.length) (g || adopted[0]).watch[it.r.id] = g ? { checks: x.checks } : { none: true };
-      }
       for (const g of groups) if (body.notes && body.notes[g.name]) g.note = body.notes[g.name];
-      agentLog = { at: Date.now(), steps: body.steps || [], report: body.report || "", replies: targets.length };
+      agentLog = { at: Date.now(), steps: body.steps || [], report: body.report || "" };
       saveGroups();
     } catch (e) { agentLog = { at: Date.now(), steps: [], report: e.message, error: true }; }
-    watching = false; agentRunning = false;
+    agentRunning = false;
     const y = window.scrollY; await render(); window.scrollTo(0, y);
   }
-  const TOOL_LABEL = { read_board: "テーマの状態を読む", check_new_replies: "新しい返事を見張る", list_owner_tasks: "やることを洗い出す", write_note: "メモを書く" };
+  const TOOL_LABEL = { read_board: "テーマの状態を読む", list_owner_tasks: "やることを洗い出す", write_note: "メモを書く" };
   function agentHtmlBody() {
-    if (agentRunning) return `<p class="meta">巡回しています…（テーマの状態を読み、新しい返事を見張り、決裁者のやることを洗い出します）</p>`;
+    if (agentRunning) return `<p class="meta">巡回しています…（テーマの状態を読み、譲渡までに決裁者がやることを洗い出します）</p>`;
     if (!agentLog) return `<p class="meta">まだ巡回していません。</p>`;
     const steps = agentLog.steps.map((st) => `<li><b>${esc(TOOL_LABEL[st.tool] || st.tool)}</b> <span class="meta">${esc(st.summary)}</span></li>`).join("");
     return `<p>${esc(agentLog.report || "（報告はありません）")}</p>
       ${steps ? `<details><summary class="meta">使った道具（${agentLog.steps.length}回）</summary><ol class="agentsteps">${steps}</ol></details>` : ""}
-      <p class="meta">${new Date(agentLog.at).toLocaleString("ja-JP")}。エージェントが持つのは、読む・見張る・洗い出す・メモを書く道具だけです。決まりを確定させたり片付けたりはできません（決めるのは決裁者）。</p>`;
-  }
-  async function watchHtml(gi, g) {
-    const entries = Object.entries(g.watch || {}).filter(([, w]) => !w.none);
-    if (!entries.length) return `<p class="meta">決まりを作ってから送ったメールのうち、このパターンに入るものはまだありません。</p>`;
-    const ok = entries.filter(([, w]) => w.checks.every((c) => c.verdict !== "決まりと違う"));
-    const ng = entries.filter(([, w]) => w.checks.some((c) => c.verdict === "決まりと違う"));
-    const rows = [];
-    for (const [id, w] of ng) {
-      const it = itemById(id);
-      if (!it) continue;
-      const key = `w-${gi}-${id}`;
-      const st = (g.watchDone || {})[id];
-      const qs = w.checks.filter((c) => c.verdict === "決まりと違う").map((c) => g.adopted.results[c.question_no - 1]).filter(Boolean);
-      rows.push(`<div class="mail"><div class="meta">${it.r.date.toLocaleDateString("ja-JP")}｜${esc(it.staff)}｜違う決まり: ${qs.map((q) => `第${q.article}条`).join("・")}</div>
-        ${it.text.split("\n").map((l) => `<div>${hl(l)}</div>`).join("")}
-        ${st ? `<p class="meta">✓ ${esc(st)}</p>` : `<div class="row">
-          <button class="btn ghost small" data-s3="retell" data-g="${gi}" data-id="${id}">スタッフに伝え直す</button>
-          <input data-s3="wcond" data-k="${key}" placeholder="例外の条件（例: 団体のとき）" style="max-width:220px">
-          <input data-s3="wdec" data-k="${key}" placeholder="この場合の答え" style="max-width:180px">
-          <button class="btn ghost small" data-s3="wexception" data-g="${gi}" data-id="${id}">例外にする</button></div>`}</div>`);
-    }
-    return `<p>決まりを作ってから送ったメールのうち、このパターンに入るもの <b>${entries.length}通</b>: 決まりどおり ${ok.length}通・<b>決まりと違う ${ng.length}通</b></p>${rows.join("")}`;
+      <p class="meta">${new Date(agentLog.at).toLocaleString("ja-JP")}。エージェントが持つのは、読む・洗い出す・メモを書く道具だけです。決まりを確定させたり片付けたりはできません（決めるのは決裁者）。</p>`;
   }
   // 完了までの残り（4つの確かめ）と、完了したらスタッフ向けマニュアル
   async function loadManual(g) {
@@ -1063,15 +1010,11 @@
       const m = g.manual;
       const body = m ? m.sections.map((sec) => `<p><b>${esc(sec.title)}</b></p><ul>${sec.items.map((it) => `<li>第${it.number}条 ${esc(it.text)}${it.reason ? `<br><span class="meta">理由: ${esc(it.reason)}</span>` : ""}</li>`).join("")}</ul>`).join("")
         + `<p class="meta">決裁者に回すこと: ${m.ask_owner.map(esc).join("／")}</p>` : `<p class="meta">マニュアルを読み込めませんでした。</p>`;
-      return `<div class="adopted"><b>✓ 完了しました（第${st.released}版）</b> — 決まりを作った後も、決まりどおりの返事が直近${st.window}通続きました。
+      return `<div class="adopted"><b>✓ 完了しました（第${st.released}版）</b> — 過去の返事はすべてこの決まりどおり（または例外として片付け済み）です。
         <details open><summary><b>スタッフ向けマニュアル</b></summary>${body}</details>
         <p class="meta">送ったメールから作った決まりは「いつでも○○」という条件の無い形なので、AI 向けの指示や自動化の仕様書は出しません。人に渡すマニュアルだけです。</p></div>`;
     }
-    return `<div class="progress"><p><b>完了まで</b>: 決まりを作った後の、決まりどおりの返事が<b>あと${st.remaining}通</b>
-      <span class="meta">（見張りで決まりどおりだった返事が積み上がります）</span></p>
-      <ul class="checks">${st.checks.map((c) => `<li>${c.ok ? "✓" : "・"} ${esc(c.label)} <span class="meta">${esc(c.answer || "")}</span></li>`).join("")}</ul>
-      <div class="row"><span class="meta">直近</span><input type="number" min="3" max="50" value="${st.window}" data-s3="window" data-g="${gi}" style="width:70px"><span class="meta">通に新しい話が出なければ完了とする</span>
-      <button class="btn ghost small" data-s3="setwindow" data-g="${gi}">変える</button></div></div>`;
+    return "";   // 完了前は、片付けの欄（下）が「やること」を示す
   }
   let statusFetched = false;
   async function fetchStatusOnce() {
@@ -1098,17 +1041,13 @@
         ${await cleanupHtml(gi, g)}
         <p><b>スタッフへの知らせ</b> <span class="meta">（コピーして、いつもの連絡に貼ってください）</span></p>
         <pre class="notice" id="notice-${gi}">${esc(noticeText(g))}</pre>
-        <div class="row"><button class="btn ghost small" data-s3="copy" data-g="${gi}">知らせをコピー</button><span class="meta" id="copymsg-${gi}"></span></div>
-        <p><b>見張り</b></p>${await watchHtml(gi, g)}</div>`);
+        <div class="row"><button class="btn ghost small" data-s3="copy" data-g="${gi}">知らせをコピー</button><span class="meta" id="copymsg-${gi}"></span></div></div>`);
     }
-    return `<div class="card"><h2>5. 伝える・見張る（第3段）</h2>
+    return `<div class="card"><h2>5. 片付けて伝える（第3段）</h2>
       <div class="todo"><b>やること</b>
-        <ol><li>決まりと違う答え方をしていた実例を、1通ずつ「これからは決まりどおり」か「この場合は例外」に片付けてください。</li>
-        <li>できあがった「スタッフへの知らせ」をコピーして、いつもの連絡に貼ってください。</li>
-        <li>次に「読んで分ける」を押すと、決まりを作ってから送ったメールが決まりどおりかを見張ります。違っていたら、伝え直すか例外にするかを選んでください。</li>
-        <li>決まりどおりの返事が積み上がって「完了」になると、スタッフ向けマニュアルができあがります。</li></ol></div>
-      ${source === "demo" ? `<div class="row"><button class="btn ghost" id="demoNext">次の週に送ったメール（架空）を読み込む</button><span class="meta">押すたびに1週ぶん（5通）届きます${demoWeeks.length ? `。いま ${demoWeeks.length / 5} 週ぶん` : ""}</span></div>` : ""}
-      <p class="meta" id="watchmsg">${watchTargets().length ? "見張っています…" : ""}</p>
+        <ol><li>決まりと違う答え方をしていた過去の返事を、1通ずつ「これからは決まりどおり」か「この場合は例外」に片付けてください。</li>
+        <li>片付けると、このテーマは完了です。スタッフ向けマニュアルができあがります。</li>
+        <li>「スタッフへの知らせ」をコピーして、いつもの連絡に貼ってください。</li></ol></div>
       ${cards.join("")}</div>`;
   }
   function bindStage3() {
@@ -1137,49 +1076,10 @@
           g.resolved = g.resolved || {}; g.resolved[pi] = body; g.status = body.status; g.manual = null; rerender();
         } catch (e) { msg.textContent = e.message; el.disabled = false; }
       });
-      else if (act === "setwindow") el.addEventListener("click", async () => {
-        const v = Number((document.querySelector(`[data-s3="window"][data-g="${gi}"]`) || {}).value);
-        if (!(v >= 3 && v <= 50)) { alert("3〜50通の間で決めてください"); return; }
-        try {
-          const r = await fetch("/api/patterns/criteria", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, window: v }) });
-          const body = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(body.detail || `うまくいきませんでした（${r.status}）`);
-          g.status = body; g.manual = null; rerender();
-        } catch (e) { alert(e.message); }
-      });
       else if (act === "copy") el.addEventListener("click", async () => {
         try { await navigator.clipboard.writeText(noticeText(g)); $(`copymsg-${gi}`).textContent = "コピーしました"; }
         catch (_) { $(`copymsg-${gi}`).textContent = "コピーできませんでした。枠の中を選んでコピーしてください"; }
       });
-      else if (act === "retell") el.addEventListener("click", () => {
-        const it = itemById(el.dataset.id);
-        g.retell = [...(g.retell || []), { date: it.r.date.toLocaleDateString("ja-JP") }];
-        g.watchDone = { ...(g.watchDone || {}), [el.dataset.id]: "スタッフへの知らせに加えました" }; rerender();
-      });
-      else if (act === "wexception") el.addEventListener("click", async () => {
-        const id = el.dataset.id, it = itemById(id), key = `w-${gi}-${id}`;
-        const cond = (document.querySelector(`[data-s3="wcond"][data-k="${key}"]`) || {}).value || "";
-        const dec = (document.querySelector(`[data-s3="wdec"][data-k="${key}"]`) || {}).value || "";
-        if (!cond.trim() || !dec.trim()) { alert("例外の条件と、この場合の答えを書いてください"); return; }
-        const qs = (g.watch[id].checks || []).filter((c) => c.verdict === "決まりと違う").map((c) => g.adopted.results[c.question_no - 1]).filter(Boolean);
-        el.disabled = true;
-        try {
-          for (const q of qs) {
-            const r = await fetch("/api/patterns/resolve", { method: "POST", headers: headers(), body: JSON.stringify({ name: g.name, question: q.question,
-              items: [{ ref: it.ref, staff: it.staff, text: it.text, choice: "exception", condition: cond.trim(), decision: dec.trim() }] }) });
-            const body = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(body.detail || `うまくいきませんでした（${r.status}）`);
-          }
-          g.watchDone = { ...(g.watchDone || {}), [id]: `例外にしました（${cond.trim()}は「${dec.trim()}」）` }; rerender();
-        } catch (e) { alert(e.message); el.disabled = false; }
-      });
-    });
-    const dn = $("demoNext");
-    if (dn) dn.addEventListener("click", async () => {
-      const now = Date.now();
-      demoWeeks.push(...window.MAIL_SCAN_DEMO_NEXT(demoWeeks.length / 5 + 1).map((m, i) => ({ ...m, date: new Date(now + (i + 1) * 60000) })));
-      results = MailScan.analyze([...window.MAIL_SCAN_DEMO, ...demoWeeks], DEMO_SETTINGS); prepared = null; maskCtx = null;
-      await prepare(); await restoreGroups(); await render();
     });
   }
 

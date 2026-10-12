@@ -78,29 +78,23 @@ def test_resolve_before_rule_and_exception():
     assert [a["condition"] for a in res["articles"]] == [None, "団体のとき"]
 
 
-def test_watch_accumulates_then_completes_and_opens_manual(monkeypatch):
+def test_theme_completes_when_rule_is_made_and_past_differences_are_resolved():
     c = TestClient(api.app)
     h = {"X-Untangle-Session": "complete-test"}
     c.post("/api/demo/reset", headers=h)
     q = "減員にキャンセル料をとりますか"
-    ex = [{"ref": i, "staff": "スタッフA", "text": f"減員は2週間前から料金をいただきます（{i}）。", "decision": "とる", "date": f"2026-09-{i:02d}"} for i in (1, 2)]
+    ex = [{"ref": i, "staff": "スタッフA", "text": f"減員は2週間前から料金をいただきます（{i}）。", "decision": "とる", "date": f"2026-09-{i:02d}"} for i in (1, 2, 3)]
+    ex.append({"ref": 9, "staff": "スタッフB", "text": "減員でも料金はいただきません。", "decision": "とらない", "date": "2026-09-09"})
     r = c.post("/api/patterns/adopt", headers=h, json={"name": "減員", "situation": "減員の連絡", "points": [
         {"question": q, "options": ["とる", "とらない"], "chosen": "とる", "examples": ex}]}).json()
-    assert r["status"]["complete"] is False and r["status"]["window"] == 10
+    assert r["status"]["complete"] is False                                   # 違う答え方が残っている
     tid = r["theme_id"]
     assert c.get(f"/api/themes/{tid}/exits/manual", headers=h).status_code == 409
-
-    def fake(rules, items):
-        return {"results": [{"ref": it["ref"], "pattern": "減員", "checks": [{"question_no": 1, "verdict": "決まりどおり"}]} for it in items]}
-    monkeypatch.setattr(gemini, "watch_rules", fake)
-    items = [{"ref": 100 + i, "staff": "スタッフB", "text": f"減員は2週間前からキャンセル料です（{i}）。", "date": f"2026-10-{i:02d}"} for i in range(1, 11)]
-    w = c.post("/api/patterns/watch", headers=h, json={"rules": [{"name": "減員", "situation": "減員の連絡", "questions": [q], "decisions": ["とる"]}], "items": items}).json()
-    st = w["status"]["減員"]
-    assert st["complete"] is True and st["released"] == 1 and st["remaining"] == 0
+    res = c.post("/api/patterns/resolve", headers=h, json={"name": "減員", "question": q, "items": [
+        {"ref": 9, "staff": "スタッフB", "text": "減員でも料金はいただきません。", "choice": "follow"}]}).json()
+    assert res["status"]["complete"] is True and res["status"]["released"] == 1   # 片付けたら完了（新しい返事は待たない）
     assert c.get(f"/api/themes/{tid}/exits/manual", headers=h).status_code == 200
-    assert c.get(f"/api/themes/{tid}/exits/ai", headers=h).status_code == 409      # 条件の無い決まりに AI 向けテストは出さない
-    # 決裁者が基準を変えられる
-    assert c.post("/api/patterns/criteria", headers=h, json={"name": "減員", "window": 20}).json()["window"] == 20
+    assert c.get(f"/api/themes/{tid}/exits/ai", headers=h).status_code == 409
 
 
 def test_owner_words_like_guardian_and_dates_pass():
@@ -126,25 +120,14 @@ def test_board_is_saved_only_in_a_workspace(monkeypatch):
     assert c.put("/api/patterns/board", headers=h, json={"nope": 1}).status_code == 400
 
 
-def test_steward_patrol_watches_and_lists_tasks_without_agent(monkeypatch):
+def test_steward_patrol_lists_tasks_until_transfer_without_agent(monkeypatch):
+    monkeypatch.setenv("UNTANGLE_AGENT", "0")                                # Gemini は呼ばない
     c = TestClient(api.app)
     h = {"X-Untangle-Session": "steward-test"}
-    c.post("/api/demo/reset", headers=h)
-    q = "減員にキャンセル料をとりますか"
-    c.post("/api/patterns/adopt", headers=h, json={"name": "減員", "situation": "減員の連絡", "points": [
-        {"question": q, "options": ["とる", "とらない"], "chosen": "とる",
-         "examples": [{"ref": 1, "staff": "スタッフA", "text": "2週間前から料金をいただきます。", "decision": "とる"}]}]})
-
-    def fake(rules, items):
-        return {"results": [{"ref": 10, "pattern": "減員", "checks": [{"question_no": 1, "verdict": "決まりどおり"}]},
-                            {"ref": 11, "pattern": "減員", "checks": [{"question_no": 1, "verdict": "決まりと違う"}]}]}
-    monkeypatch.setattr(gemini, "watch_rules", fake)
-    r = c.post("/api/patterns/agent", headers=h, json={
-        "rules": [{"name": "減員", "situation": "減員の連絡", "questions": [q], "decisions": ["とる"]}],
-        "items": [{"ref": 10, "staff": "スタッフB", "text": "2週間前からキャンセル料です。"}, {"ref": 11, "staff": "スタッフC", "text": "料金はいただきません。"}],
-        "board": [{"name": "減員", "state": "watch", "remaining": 9}, {"name": "定員", "state": "decide"}]}).json()
+    r = c.post("/api/patterns/agent", headers=h, json={"unsorted": 2, "board": [
+        {"name": "減員", "state": "done"}, {"name": "定員", "state": "decide"}, {"name": "子供", "state": "later"}]}).json()
     tools = [s["tool"] for s in r["steps"]]
-    assert tools[:3] == ["read_board", "check_new_replies", "list_owner_tasks"]     # 決まった手順で巡回（エージェント無しの設定）
-    assert "決まりどおり1・違う1" in r["steps"][1]["summary"]
-    assert "決裁者がやること 2件" in r["steps"][2]["summary"]
-    assert r["status"]["減員"]["remaining"] < 10                                    # 決まりどおりの返事が実例として積まれた
+    assert tools[:2] == ["read_board", "list_owner_tasks"]                  # 決まった手順で巡回（エージェント無しの設定）
+    assert "完了 1／3テーマ" in r["steps"][1]["summary"] and "やること 3件" in r["steps"][1]["summary"]
+    done = c.post("/api/patterns/agent", headers=h, json={"board": [{"name": "減員", "state": "done"}]}).json()
+    assert "業務を譲渡できます" in done["report"]

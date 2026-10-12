@@ -727,7 +727,8 @@ def _day(v: str | None) -> date:
         return date.today()
 
 
-MAIL_NOVELTY_WINDOW = 10   # 送ったメールのテーマは「直近10通に新しい話が無い」で完了（決裁者が変えられる）
+MAIL_NOVELTY_WINDOW = 0    # 過去に送ったメールを全部読んで型を出し切る前提なので、「新しい話が出ないか」は待たない
+                           # （決まりを作り、決まりと違う過去の返事を片付けたら完了）
 
 
 def _pattern_status(st: Store, theme) -> dict:
@@ -996,41 +997,27 @@ def _watch_record(rules: list[dict], ok: list[dict], dates: dict) -> tuple[list[
 class BoardTheme(BaseModel):
     name: str
     state: str
-    remaining: int | None = None
 
 
 class StewardRequest(BaseModel):
-    rules: list[WatchRule] = []
-    items: list[PatternItem] = []
     board: list[BoardTheme] = []
+    unsorted: int = 0          # どのテーマにも入らなかった、判断を含む返事の数
 
 
 @app.post("/api/patterns/agent")
 def pattern_agent(body: StewardRequest):
-    """エージェントの巡回: テーマの状態を読み、新しい返事を見張り、決裁者がやることを洗い出してメモを書く。
+    """エージェントの巡回: 全テーマの状態を読み、譲渡までに決裁者がやることを洗い出してメモを書く。
     決まりを確定・片付ける道具は持たない（確定は決裁者だけ）。"""
     from .agent import steward_patrol
-    if len(body.items) > PATTERN_MAX_ITEMS or len(body.board) > 50:
+    if len(body.board) > 50:
         raise HTTPException(400, "量が多すぎます")
-    rules = []
-    for r in body.rules:
-        try:
-            rules.append({"name": _plain(r.name, 60), "situation": _plain(r.situation, 200),
-                          "points": [{"question": _plain(q, 200), "decision": _plain(d, 200)} for q, d in zip(r.questions, r.decisions)]})
-        except HTTPException:
-            continue
     board = []
     for b in body.board:
         try:
-            board.append({"name": _plain(b.name, 60), "state": b.state[:20], "remaining": b.remaining})
+            board.append({"name": _plain(b.name, 60), "state": b.state[:20]})
         except HTTPException:
             continue
-    ok, held = _checked(body.items)
-    dates = {it.ref: it.date for it in body.items}
-    run = steward_patrol(board, rules, ok,
-                         watch=lambda: _watch_record(rules, ok, dates) if rules and ok else ([], {}),
-                         plain=lambda t, n: _plain(t, n))
-    return {**run, "held": held}
+    return steward_patrol(board, max(0, min(body.unsorted, 10000)), plain=lambda t, n: _plain(t, n))
 
 
 @app.post("/api/patterns/watch")
