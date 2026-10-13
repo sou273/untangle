@@ -14,161 +14,163 @@
   .w{font-size:15px;font-weight:700;fill:#ffffff}
   .lab{font-size:13px;fill:#1f4f96;font-weight:700}
   .lab2{font-size:13px;fill:#6a4bb0;font-weight:700}
+  .lab3{font-size:13px;fill:#1e7a4f;font-weight:700}
+  .step{font-size:17px;font-weight:700;fill:#1f4f96}
 </style>
 </head>
 <body>
-<svg width="1600" height="1000" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+<svg width="1600" height="1040" viewBox="0 0 1600 1040" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f4f96"/></marker>
     <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6a4bb0"/></marker>
     <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1e7a4f"/></marker>
   </defs>
-  <rect width="1600" height="1000" fill="#ffffff"/>
+  <rect width="1600" height="1040" fill="#ffffff"/>
   <text x="40" y="58" class="title">Untangle 構成図</text>
-  <text x="40" y="88" class="s" style="font-size:16px">決裁者の判断を、テスト済みの規程として引き出す。生の文は自分のプロジェクトの外に出さず、外部のGeminiには伏せた後の文だけを渡す。</text>
+  <text x="40" y="88" class="s" style="font-size:16px">スタッフが過去に送ったメールから、ひな形に書き足された判断を全部取り出し、決裁者が決まりにして業務を譲渡する。生のメールはブラウザの外に出さない。</text>
 
-  <!-- 左: 店 -->
-  <rect x="40" y="130" width="250" height="600" rx="16" fill="#f5f7fa" stroke="#d6dce5"/>
-  <text x="60" y="162" class="h">店（個人店・零細企業）</text>
-  <rect x="60" y="185" width="210" height="96" rx="12" fill="#ffffff" stroke="#d6dce5"/>
-  <text x="76" y="213" class="t">決裁者とスタッフの</text>
-  <text x="76" y="236" class="t">やり取り</text>
-  <text x="76" y="262" class="s">チャット・メール・一言メモ</text>
-  <rect x="60" y="296" width="210" height="80" rx="12" fill="#ffffff" stroke="#d6dce5"/>
-  <text x="76" y="324" class="t">業務の中で</text>
-  <text x="76" y="347" class="t">人が直した跡</text>
-  <text x="76" y="366" class="s">台帳の修正・承認</text>
-  <rect x="60" y="391" width="210" height="62" rx="12" fill="#ffffff" stroke="#d6dce5"/>
-  <text x="76" y="418" class="t">店の台帳</text>
-  <text x="76" y="440" class="s">スタッフ名簿・取引先一覧</text>
-  <rect x="60" y="520" width="210" height="190" rx="12" fill="#e3ebf7" stroke="#1f4f96"/>
-  <text x="76" y="550" class="h" style="fill:#1f4f96">決裁者</text>
-  <text x="76" y="578" class="t">質問に一言で答える</text>
-  <text x="76" y="603" class="t">条文を確定する</text>
-  <text x="76" y="628" class="t">完了の基準を決める</text>
-  <text x="76" y="653" class="t">AIに見せる範囲を決める</text>
-  <text x="76" y="690" class="s">確定できるのは決裁者だけ</text>
+  <!-- 左: 店のブラウザ -->
+  <rect x="40" y="120" width="480" height="640" rx="20" fill="#f7f5fc" stroke="#6a4bb0" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="60" y="148" class="lab2">決裁者のパソコンのブラウザ — 生のメールが通るのはこの中だけ</text>
 
-  <!-- 自分のプロジェクトの境界 -->
-  <rect x="330" y="120" width="840" height="620" rx="20" fill="none" stroke="#6a4bb0" stroke-width="2" stroke-dasharray="8 6"/>
-  <text x="350" y="148" class="lab2">自分のGoogle Cloudプロジェクト（東京リージョン）— 生の文が通るのはこの中だけ</text>
+  <rect x="60" y="165" width="440" height="70" rx="12" fill="#ffffff" stroke="#d6dce5"/>
+  <text x="76" y="193" class="h">Gmail の送ったメール</text>
+  <text x="76" y="218" class="s">読み取りのみ（gmail.readonly）。審査用は架空の店の98通</text>
 
-  <!-- Cloud Run 本体 -->
-  <rect x="350" y="165" width="560" height="555" rx="16" fill="#ffffff" stroke="#1f4f96" stroke-width="2"/>
-  <rect x="350" y="165" width="560" height="40" rx="16" fill="#1f4f96"/>
-  <rect x="350" y="185" width="560" height="20" fill="#1f4f96"/>
-  <text x="370" y="192" class="w">Cloud Run「untangle」 画面・API・エージェント</text>
+  <rect x="60" y="250" width="440" height="115" rx="12" fill="#ffffff" stroke="#d6dce5"/>
+  <text x="76" y="278" class="h">① ひな形からの外れを取り出す</text>
+  <text x="76" y="303" class="t">同じ行が何通にも出る部分＝ひな形として外し、</text>
+  <text x="76" y="326" class="t">スタッフが書き足した文だけを残す</text>
+  <text x="76" y="350" class="s">自動送信のメールと、お礼・承知だけの返事も外す</text>
 
-  <!-- 行1: 伏せる層・消し残しの検査 -->
-  <rect x="370" y="220" width="255" height="124" rx="12" fill="#eee8f8" stroke="#6a4bb0"/>
-  <text x="386" y="248" class="h" style="fill:#6a4bb0">① 伏せる層</text>
-  <text x="386" y="274" class="t">店の台帳＋決まった規則</text>
-  <text x="386" y="297" class="s">名前・電話・日付 → 属性へ</text>
-  <text x="386" y="317" class="s">認証情報を含む文は取り込まない</text>
-  <text x="386" y="336" class="s">元の文は保存しない</text>
-  <rect x="640" y="220" width="250" height="124" rx="12" fill="#eee8f8" stroke="#6a4bb0"/>
-  <text x="656" y="248" class="h" style="fill:#6a4bb0">② 消し残しの検査</text>
-  <text x="656" y="276" class="t">疑いがあれば保留</text>
-  <text x="656" y="299" class="s">Geminiには渡さない</text>
-  <text x="656" y="319" class="s">Gemmaが使えないときも渡さない</text>
+  <rect x="60" y="380" width="440" height="170" rx="12" fill="#ffffff" stroke="#d6dce5"/>
+  <text x="76" y="408" class="h">② 名前や番号を伏せる（AIを使わない）</text>
+  <text x="76" y="434" class="t">・電話・メール・住所・宛名・会社名の語尾</text>
+  <text x="76" y="458" class="t">・署名から集めたスタッフ名 → 「スタッフA」</text>
+  <text x="76" y="482" class="t">・日本語の辞書（kuromoji、裏の Web Worker）で</text>
+  <text x="76" y="506" class="t">　固有名詞と辞書に無い語</text>
+  <text x="76" y="530" class="t">・「様」の前は、名前でないと分かる語以外すべて</text>
 
-  <!-- 行2: 条文エンジン -->
-  <rect x="370" y="356" width="520" height="96" rx="12" fill="#f5f7fa" stroke="#d6dce5"/>
-  <text x="386" y="383" class="h">④ 条文エンジン</text>
-  <text x="530" y="383" class="s">決まったプログラム（AIを使わない）</text>
-  <text x="386" y="409" class="t">条文を当てはめ、過去の場面でテストする</text>
-  <text x="386" y="433" class="s">外れを3つに分けて数える・4つの確認で完了・いつ聞くかの判定</text>
+  <rect x="60" y="565" width="440" height="70" rx="12" fill="#ffffff" stroke="#d6dce5"/>
+  <text x="76" y="593" class="h">③ 伏せ残りの疑いがある行は送らない</text>
+  <text x="76" y="617" class="s">確かめる画面は無い。疑わしければ送らない側に倒す</text>
 
-  <!-- 行3: エージェント -->
-  <rect x="370" y="464" width="520" height="140" rx="12" fill="#e3ebf7" stroke="#1f4f96"/>
-  <text x="386" y="492" class="h" style="fill:#1f4f96">⑤ 引き継ぎエージェント（ADK）</text>
-  <text x="386" y="515" class="s">記録が届くたびに巡回し、作業記録を残す</text>
-  <text x="386" y="541" class="t">持たせる道具: 状態を見る・新しい場面を見る</text>
-  <text x="386" y="563" class="t">・聞くべきことを探す・言い回しを整える・テストする</text>
-  <text x="386" y="590" class="t" style="font-weight:700;fill:#b0342c">持たせない道具: 条文の確定・変更、質問への回答</text>
+  <rect x="60" y="650" width="440" height="105" rx="12" fill="#e3ebf7" stroke="#1f4f96"/>
+  <text x="76" y="676" class="h" style="fill:#1f4f96">決裁者（ダッシュボード）</text>
+  <text x="76" y="702" class="t">分け方を確かめる → 決め方を選ぶ →</text>
+  <text x="76" y="726" class="t">違う答え方を片付ける → マニュアルを渡す</text>
+  <text x="76" y="744" class="s">決まりを確定・片付けできるのは決裁者だけ</text>
 
-  <!-- 行4: 出口 -->
-  <rect x="370" y="616" width="520" height="90" rx="12" fill="#e1f2e9" stroke="#1e7a4f"/>
-  <text x="386" y="644" class="h" style="fill:#1e7a4f">⑥ 出口（テスト合格・確認済みの条文だけ）</text>
-  <text x="386" y="670" class="t">スタッフ向けマニュアル／AIへの指示＋テスト一式</text>
-  <text x="386" y="693" class="t">／自動化の仕様書</text>
+  <path d="M280,235 L280,250" stroke="#6a4bb0" stroke-width="2" marker-end="url(#p)"/>
+  <path d="M280,365 L280,380" stroke="#6a4bb0" stroke-width="2" marker-end="url(#p)"/>
+  <path d="M280,550 L280,565" stroke="#6a4bb0" stroke-width="2" marker-end="url(#p)"/>
 
-  <!-- Gemma（行3の右） -->
-  <rect x="935" y="464" width="215" height="196" rx="16" fill="#ffffff" stroke="#6a4bb0" stroke-width="2"/>
-  <rect x="935" y="464" width="215" height="40" rx="16" fill="#6a4bb0"/>
-  <rect x="935" y="484" width="215" height="20" fill="#6a4bb0"/>
-  <text x="951" y="491" class="w">Cloud Run「gemma」</text>
-  <text x="951" y="532" class="h">Gemma 3（4B）</text>
-  <text x="951" y="555" class="s">CPUで動く公開モデル</text>
-  <text x="951" y="583" class="t">台帳に無い</text>
-  <text x="951" y="605" class="t">固有名詞を見つける</text>
-  <text x="951" y="632" class="s">非公開。呼べるのは</text>
-  <text x="951" y="650" class="s">本体のアカウントだけ</text>
+  <!-- 中央: Cloud Run -->
+  <rect x="600" y="120" width="520" height="640" rx="16" fill="#ffffff" stroke="#1f4f96" stroke-width="2"/>
+  <rect x="600" y="120" width="520" height="40" rx="16" fill="#1f4f96"/>
+  <rect x="600" y="140" width="520" height="20" fill="#1f4f96"/>
+  <text x="620" y="147" class="w">Cloud Run「untangle」（東京）画面・API・エージェント</text>
 
-  <!-- 外部: Gemini -->
-  <rect x="1210" y="165" width="350" height="320" rx="16" fill="#ffffff" stroke="#1f4f96" stroke-width="2"/>
-  <rect x="1210" y="165" width="350" height="40" rx="16" fill="#1f4f96"/>
-  <rect x="1210" y="185" width="350" height="20" fill="#1f4f96"/>
-  <text x="1230" y="192" class="w">Vertex AI　Gemini 3.5 Flash（東京）</text>
-  <text x="1230" y="232" class="s">学習に使われない契約の上で、</text>
-  <text x="1230" y="251" class="s">伏せた後の文だけを受け取る</text>
-  <text x="1230" y="284" class="t">③ 場面の読み取り</text>
-  <text x="1230" y="305" class="s">答えは問いの選択肢から選ばせる</text>
-  <text x="1230" y="340" class="t">⑤ 質問の言い回し（エージェント）</text>
-  <text x="1230" y="375" class="t">⑥ AIへの指示の「渡す前のテスト」</text>
-  <text x="1230" y="396" class="s">規程だけを渡して同梱のテストを解かせ、</text>
-  <text x="1230" y="415" class="s">正解はUntangleが数える</text>
-  <text x="1230" y="446" class="s">実測: 130件中130件で正解・規程に無い</text>
-  <text x="1230" y="465" class="s">場面2件中2件で「決裁者に回します」</text>
+  <rect x="620" y="175" width="480" height="100" rx="12" fill="#f5f7fa" stroke="#d6dce5"/>
+  <text x="636" y="203" class="h">④ もう一度検査する</text>
+  <text x="636" y="229" class="t">決まった規則で伏せ直して1字でも変われば、</text>
+  <text x="636" y="253" class="t">その文は Gemini に渡さない。受け取った文は保存しない</text>
 
-  <!-- 外部: 受け手 -->
-  <rect x="1210" y="510" width="350" height="220" rx="16" fill="#f5f7fa" stroke="#d6dce5"/>
-  <text x="1230" y="540" class="h">渡した先（使用者に委ねる）</text>
-  <text x="1230" y="570" class="t">スタッフ: マニュアルで答える</text>
-  <text x="1230" y="598" class="t">AI: テストに合格した指示だけ</text>
-  <text x="1230" y="626" class="t">自動化: 判断表とテスト一式</text>
-  <text x="1230" y="658" class="s">任せ方の段階: 見学 → 案を出す →</text>
-  <text x="1230" y="678" class="s">事後確認 → 自動（直近N件で修正0なら次へ）</text>
-  <text x="1230" y="708" class="s">規程が変われば作り直し、変わる件数を示す</text>
+  <rect x="620" y="290" width="480" height="150" rx="12" fill="#f5f7fa" stroke="#d6dce5"/>
+  <text x="636" y="318" class="h">⑤ 条文エンジン（AIを使わない）</text>
+  <text x="636" y="344" class="t">決裁者が選んだ答えを条文にし、過去の実例に</text>
+  <text x="636" y="368" class="t">当て直して、決まりと違う答え方を数える</text>
+  <text x="636" y="392" class="t">片付け: 「これからは決まりどおり」か「例外の条件」</text>
+  <text x="636" y="420" class="s">違いが残っていなければ完了 → 規程の版を出す</text>
 
-  <!-- 矢印 -->
-  <text x="282" y="205" class="lab2">生の文</text>
-  <path d="M270,233 L366,262" stroke="#6a4bb0" stroke-width="2.4" fill="none" marker-end="url(#p)"/>
-  <path d="M270,336 L366,300" stroke="#6a4bb0" stroke-width="2.4" fill="none" marker-end="url(#p)"/>
-  <path d="M270,422 L366,330" stroke="#6a4bb0" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#p)"/>
-  <path d="M625,282 L636,282" stroke="#6a4bb0" stroke-width="2.4" fill="none" marker-end="url(#p)"/>
-  <!-- ②⇔Gemma（エンジンの右の余白を通す） -->
-  <path d="M890,330 C915,330 915,420 960,460" stroke="#6a4bb0" stroke-width="2" fill="none" marker-end="url(#p)"/>
-  <path d="M1000,460 C1000,380 960,300 894,300" stroke="#6a4bb0" stroke-width="2" fill="none" marker-end="url(#p)"/>
-  <text x="1012" y="410" class="lab2">名前の候補</text>
-  <!-- ②→Gemini -->
-  <path d="M890,250 L1206,250" stroke="#1f4f96" stroke-width="2.6" fill="none" marker-end="url(#a)"/>
-  <text x="935" y="240" class="lab">伏せた後の文だけ</text>
-  <!-- Gemini→エンジン（場面） -->
-  <path d="M1206,300 C1120,300 1060,360 894,390" stroke="#1f4f96" stroke-width="2" fill="none" marker-end="url(#a)"/>
-  <text x="1100" y="330" class="lab">場面</text>
-  <!-- エンジン→エージェント -->
-  <path d="M630,452 L630,460" stroke="#1f4f96" stroke-width="2" fill="none" marker-end="url(#a)"/>
-  <!-- 決裁者 -->
-  <path d="M270,620 L366,560" stroke="#1f4f96" stroke-width="2.4" fill="none" marker-end="url(#a)"/>
-  <path d="M366,585 L274,650" stroke="#1f4f96" stroke-width="2.4" fill="none" marker-end="url(#a)"/>
-  <text x="282" y="586" class="lab">質問</text>
-  <text x="282" y="672" class="lab">答え</text>
-  <!-- 出口→渡した先 -->
-  <path d="M890,690 C1000,700 1100,640 1206,620" stroke="#1e7a4f" stroke-width="2.6" fill="none" marker-end="url(#g)"/>
+  <rect x="620" y="455" width="480" height="160" rx="12" fill="#f5f7fa" stroke="#d6dce5"/>
+  <text x="636" y="483" class="h">⑥ 巡回エージェント（ADK）</text>
+  <text x="636" y="509" class="t">持たせる道具: テーマの状態を読む・</text>
+  <text x="636" y="533" class="t">譲渡までのやることを洗い出す・メモを書く</text>
+  <text x="636" y="557" class="t">持たせない道具: 決まりの確定・変更、片付け</text>
+  <text x="636" y="583" class="s">呼んだ道具はすべて画面に出す。Gemini が混んでいれば</text>
+  <text x="636" y="602" class="s">待ってやり直し、だめなら同じ手順を決まったプログラムで</text>
 
-  <!-- 下: 固く渡すための6つの決まり -->
-  <rect x="40" y="770" width="1520" height="200" rx="16" fill="#f5f7fa" stroke="#d6dce5"/>
-  <text x="60" y="804" class="h">「固く渡す」— 決裁者が決めたルールに則ってテストし、問題がなければ渡す</text>
-  <g class="t">
-    <text x="60" y="842">データ: 伏せ方もテストに合格してから使う（消し漏れ0・消しすぎ0）</text>
-    <text x="60" y="874">判断: いつ聞くかは決まったプログラム。エージェントは言い回しだけ</text>
-    <text x="60" y="906">権限: 確定・回答の道具をエージェントに渡さない（テストで固定）</text>
-    <text x="810" y="842">合否: 正解を数えるのはUntangle。AIに合否を言わせない</text>
-    <text x="810" y="874">出口: AIは規程の選択肢からしか答えられない。規程外は決裁者へ</text>
-    <text x="810" y="906">可観測性: 呼んだ道具・AIに渡した内容をすべて記録して画面に出す</text>
-  </g>
-  <text x="60" y="948" class="s">完了の4つの確認: 答えられない場面は残っていないか／答えはあなたと同じか／もう新しい話は出てこないか／あなたへの質問は残っていないか</text>
+  <rect x="620" y="630" width="480" height="115" rx="12" fill="#e1f2e9" stroke="#1e7a4f"/>
+  <text x="636" y="658" class="h" style="fill:#1e7a4f">⑦ 出口: スタッフ向けマニュアル</text>
+  <text x="636" y="684" class="t">完了したテーマの決まり・理由・例外を1つに。</text>
+  <text x="636" y="708" class="t">全テーマが完了すると「業務を譲渡できます」</text>
+  <text x="636" y="732" class="s">費用の歯止め: 接続元ごと・全体の回数制限、本文1MB</text>
+
+  <!-- ブラウザ ⇄ Cloud Run -->
+  <path d="M500,600 L620,240" stroke="#6a4bb0" stroke-width="2" marker-end="url(#p)"/>
+  <text x="530" y="300" class="lab2">伏せた</text>
+  <text x="530" y="316" class="lab2">文だけ</text>
+  <path d="M600,720 L500,720" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M500,690 L620,370" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <text x="560" y="596" class="lab">選んだ</text>
+  <text x="560" y="612" class="lab">答え</text>
+  <text x="524" y="740" class="lab">やること</text>
+  <text x="524" y="756" class="lab">・メモ</text>
+
+  <!-- 右: Vertex AI -->
+  <rect x="1200" y="120" width="360" height="370" rx="16" fill="#ffffff" stroke="#1f4f96" stroke-width="2"/>
+  <rect x="1200" y="120" width="360" height="40" rx="16" fill="#1f4f96"/>
+  <rect x="1200" y="140" width="360" height="20" fill="#1f4f96"/>
+  <text x="1220" y="147" class="w">Vertex AI　Gemini 3.5 Flash（東京）</text>
+  <text x="1220" y="190" class="s">伏せた後の文だけを受け取る</text>
+  <text x="1220" y="226" class="h">判断のテーマに分ける</text>
+  <text x="1220" y="250" class="s">書き足しの文を、同じ判断ごとのテーマに。</text>
+  <text x="1220" y="268" class="s">判断の無い文は外す</text>
+  <text x="1220" y="306" class="h">決めることを並べる</text>
+  <text x="1220" y="330" class="s">実例に出た答え方を選択肢にして、</text>
+  <text x="1220" y="348" class="s">どの実例がどの答えかを付ける</text>
+  <text x="1220" y="386" class="h">巡回エージェントのモデル</text>
+  <text x="1220" y="410" class="s">状態の読み取りと、テーマごとのメモの言い回し</text>
+  <text x="1220" y="452" class="s">用途ごとに考える量（思考トークン）を絞る</text>
+
+  <path d="M1100,212 L1200,212" stroke="#6a4bb0" stroke-width="2" marker-end="url(#p)"/>
+  <path d="M1200,250 L1100,250" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <text x="1112" y="204" class="lab2">伏せた文</text>
+  <text x="1112" y="270" class="lab">テーマ</text>
+  <path d="M1100,520 L1200,420" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- 右下: 譲渡した先 -->
+  <rect x="1200" y="530" width="360" height="230" rx="16" fill="#e1f2e9" stroke="#1e7a4f" stroke-width="2"/>
+  <text x="1220" y="562" class="h" style="fill:#1e7a4f">譲渡した先</text>
+  <text x="1220" y="592" class="t">スタッフ: マニュアルどおりに答える</text>
+  <text x="1220" y="618" class="t">AI: マニュアルを指示として使う</text>
+  <text x="1220" y="644" class="t">決裁者: 決まりに無い場面だけ見る</text>
+  <text x="1220" y="680" class="s">判断は過去のメールに出たものを</text>
+  <text x="1220" y="698" class="s">全部確かめてあるので、決まりと違う</text>
+  <text x="1220" y="716" class="s">答え方が残ったまま渡すことは無い</text>
+  <path d="M1100,688 L1200,688" stroke="#1e7a4f" stroke-width="2" marker-end="url(#g)"/>
+
+  <!-- 下: 決裁者の4段 -->
+  <rect x="40" y="790" width="1520" height="225" rx="16" fill="#f5f7fa" stroke="#d6dce5"/>
+  <text x="60" y="822" class="h">決裁者がやること — 過去のメールを全部読み込んだ時点で、テーマは全部出ている</text>
+
+  <rect x="60" y="842" width="270" height="88" rx="12" fill="#ffffff" stroke="#1f4f96"/>
+  <text x="78" y="870" class="step">1. 分け方を確かめる</text>
+  <text x="78" y="895" class="s">実例を見て、同じ判断の</text>
+  <text x="78" y="913" class="s">まとまりになっているか</text>
+  <path d="M330,886 L360,886" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="362" y="842" width="270" height="88" rx="12" fill="#ffffff" stroke="#1f4f96"/>
+  <text x="380" y="870" class="step">2. 決め方を選ぶ</text>
+  <text x="380" y="895" class="s">スタッフの答え方から1つ選ぶ。</text>
+  <text x="380" y="913" class="s">いま決めないなら「あとで決める」</text>
+  <path d="M632,886 L662,886" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="664" y="842" width="270" height="88" rx="12" fill="#ffffff" stroke="#1f4f96"/>
+  <text x="682" y="870" class="step">3. 違う答え方を片付ける</text>
+  <text x="682" y="895" class="s">決まりと違っていた過去の返事を</text>
+  <text x="682" y="913" class="s">「決まりどおり」か「例外」に</text>
+  <path d="M934,886 L964,886" stroke="#1f4f96" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="966" y="842" width="270" height="88" rx="12" fill="#e1f2e9" stroke="#1e7a4f"/>
+  <text x="984" y="870" class="step" style="fill:#1e7a4f">4. 完了</text>
+  <text x="984" y="895" class="s">マニュアルができる。</text>
+  <text x="984" y="913" class="s">スタッフへの知らせもコピーできる</text>
+  <path d="M1236,886 L1266,886" stroke="#1e7a4f" stroke-width="2" marker-end="url(#g)"/>
+  <rect x="1268" y="842" width="272" height="88" rx="12" fill="#1e7a4f"/>
+  <text x="1286" y="878" class="w" style="font-size:18px">全テーマ完了で</text>
+  <text x="1286" y="906" class="w" style="font-size:18px">業務を譲渡できます</text>
+
+  <text x="60" y="962" class="t">固く渡す: 伏せるのも、条文を当て直して違いを数えるのも、完了の判定も、決まったプログラム。AI に任せるのは分ける・並べる・メモを書くことだけ。</text>
+  <text x="60" y="990" class="t">決まりを確定する道具・片付ける道具はエージェントに渡していない（テストで固定）。決めるのは決裁者で、エージェントは譲渡までの道筋を示す。</text>
 </svg>
 </body>
 </html>

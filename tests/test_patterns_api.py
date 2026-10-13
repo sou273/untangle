@@ -131,3 +131,9 @@ def test_steward_patrol_lists_tasks_until_transfer_without_agent(monkeypatch):
     assert "完了 1／3テーマ" in r["steps"][1]["summary"] and "やること 3件" in r["steps"][1]["summary"]
     done = c.post("/api/patterns/agent", headers=h, json={"board": [{"name": "減員", "state": "done"}]}).json()
     assert "業務を譲渡できます" in done["report"]
+
+
+def test_steward_has_no_tool_to_confirm_or_resolve():
+    from untangle.agent import StewardRun
+    names = sorted(f.__name__ for f in StewardRun([], 0, plain=lambda t, n: t).tools())
+    assert names == ["list_owner_tasks", "read_board", "write_note"]          # 決まりの確定・片付けの道具は持たせない
