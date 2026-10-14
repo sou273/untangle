@@ -417,6 +417,7 @@
 
   // 架空の店で試す: 途中まで進んだ状態（各段にテーマがある）から始める。Gemini は呼ばない
   async function startDemo(fresh) {
+    dashState = "all"; try { localStorage.removeItem("untangle-dash-state"); } catch (_) {}   // 絞り込みも最初に戻す
     results = MailScan.analyze(window.MAIL_SCAN_DEMO, DEMO_SETTINGS); source = "demo"; showDetected(); prepared = null; grouped = null; groups = null; focus = null; agentLog = null; agentRanFor = null; excluded.clear();
     $("msg").textContent = `架空の店のメール ${window.MAIL_SCAN_DEMO.length}通で試しています（実在のお客様とは関係ありません）`;
     try {
