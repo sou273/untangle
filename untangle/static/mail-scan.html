@@ -672,7 +672,7 @@
     const live = groups.filter((g) => g.refs.length);
     const okN = live.filter((g) => g.ok).length;
     const dropped = prepared.items.length - grouped.held.length - new Set(groups.flatMap((g) => g.refs)).size;
-    return `<div class="card"><h2>3. パターン分けを確かめる（第1段）</h2>
+    return `<div class="card"><h2>3. 分類を確認する（第1段）</h2>
       <div class="todo"><b>やること</b>
         <ol><li>パターンごとに「どんな場面か」と実例を読み、同じ話が1つのパターンに入っているか確かめてください。<span class="meta">実例は「次の実例 ›」で順に見られます。</span></li>
         <li>違う話が混ざっていたら［この実例はこのパターンではない］、同じ話が別々になっていたら［ほかのパターンと一緒にする］。</li>
@@ -682,18 +682,18 @@
         <button class="btn ghost small" id="regroup">はじめから分け直す（Gemini をもう一度呼ぶ）</button></p>` : ""}
       <p class="meta">確かめた ${okN} / ${live.length} パターン。判断の無い返事 ${grouped.no_judgment.length + prepared.noJudgment.length}通・自動送信は外しました。どのパターンにも入らなかった返事 ${Math.max(0, dropped)}通${grouped.held.length ? `、伏せ残りの疑いで送らなかった文 ${grouped.held.length}通` : ""}。</p>
       ${cards.join("") || (focus === null ? "<p>パターンは見つかりませんでした。</p>" : "")}
-      ${live.length && okN === live.length ? `<p class="big">全部のパターンを確かめました。下の「4. 決め方を決める」へ進んでください。</p>` : ""}</div>`;
+      ${live.length && okN === live.length ? `<p class="big">全部のパターンを確かめました。下の「4. 判断を確認する」へ進んでください。</p>` : ""}</div>`;
   }
 
   // ---- ダッシュボード: テーマを状態ごとに並べ、どこまで進んだかを一目で見る ----
   let focus = null;   // 開いているテーマ（groups の番号）。null ならダッシュボード
   let dashState = (() => { try { return localStorage.getItem("untangle-dash-state") || "all"; } catch (_) { return "all"; } })();
-  const STEPS = ["分け方", "決め方", "片付け", "完了"];
+  const STEPS = ["分類", "判断", "例外", "完了"];
   const DASH = [
     { key: "all", lbl: "すべて", sub: "全部のテーマ" },
-    { key: "check", step: 1, lbl: "分け方を確かめる", sub: "パターンが合っているか", you: true, chip: "you" },
-    { key: "decide", step: 2, lbl: "決め方を決める", sub: "実例の答え方から選ぶ", you: true, chip: "you" },
-    { key: "fix", step: 3, lbl: "違う答え方の片付け", sub: "これまでの返事を整理", you: true, chip: "fix" },
+    { key: "check", step: 1, lbl: "分類を確認する", sub: "パターンが合っているか", you: true, chip: "you" },
+    { key: "decide", step: 2, lbl: "判断を確認する", sub: "実例の答え方から選ぶ", you: true, chip: "you" },
+    { key: "fix", step: 3, lbl: "例外を確認する", sub: "これまでの返事を整理", you: true, chip: "fix" },
     { key: "done", step: 4, lbl: "完了", sub: "マニュアルができた", chip: "done" },
     { key: "later", step: 2, lbl: "あとで決める", sub: "いまは決めずに残した", chip: "later" },
   ];
@@ -706,7 +706,7 @@
     return "done";   // 決まりを作り、決まりと違う過去の返事を片付けたら完了（過去のメールは全部読んでいる）
   }
   function nextText(g, st) {
-    if (st === "check") return `${g.refs.length}通の実例を見て、分け方が合っているか確かめる`;
+    if (st === "check") return `${g.refs.length}通の実例を見て、分類が合っているか確かめる`;
     if (st === "decide") return g.points ? `決めること ${g.points.length}つに答える` : "決めることを並べる";
     if (st === "later") return "いまは決めずに残しています";
     if (st === "fix") return `違う答え方をしていた過去の返事 ${unresolved(g)}通を片付ける`;
@@ -720,7 +720,7 @@
     const counts = {};
     for (const [, g] of live) { const k = stateOf(g); counts[k] = (counts[k] || 0) + 1; }
     if (!DASH_BY[dashState]) dashState = "all";
-    // 5つの段を矢印でつないだ1本の流れ。「あとで決める」は決め方から外れる枝、「すべて」は絞り込みを外すボタン
+    // 5つの段を矢印でつないだ1本の流れ。「あとで決める」は判断から外れる枝、「すべて」は絞り込みを外すボタン
     const seg = (k) => { const d = DASH_BY[k]; return `<button class="seg s-${k}" aria-pressed="${dashState === k}" data-dash="${k}">
       <span class="lbl">${esc(d.lbl)}</span><span class="n">${counts[k] || 0}</span><span class="sub">${esc(d.sub)}</span></button>`; };
     const buttons = `<div class="flow">
@@ -864,7 +864,7 @@
       cards.push(`<div class="pattern">${head}${pts.join("")}
         <div class="row"><button class="btn small" data-s2="adopt" data-g="${gi}">${g.adopted ? "この答えで決め直す" : "この答えで決まりにする"}</button><span class="meta" id="s2msg-${gi}"></span></div>${done}</div>`);
     }
-    return `<div class="card"><h2>4. 決め方を決める（第2段）</h2>
+    return `<div class="card"><h2>4. 判断を確認する（第2段）</h2>
       <div class="todo"><b>やること</b>
         <ol><li>［合っている］を押したパターンごとに［決めることを並べる］を押してください。実例に出た答え方が、件数つきで並びます。</li>
         <li>問いごとに答えを選んでください。実例の答え方のどれか・自分で書く・いまは決めない、から選べます。</li>
@@ -1044,7 +1044,7 @@
         <pre class="notice" id="notice-${gi}">${esc(noticeText(g))}</pre>
         <div class="row"><button class="btn ghost small" data-s3="copy" data-g="${gi}">知らせをコピー</button><span class="meta" id="copymsg-${gi}"></span></div></div>`);
     }
-    return `<div class="card"><h2>5. 片付けて伝える（第3段）</h2>
+    return `<div class="card"><h2>5. 例外を確認する（第3段）</h2>
       <div class="todo"><b>やること</b>
         <ol><li>決まりと違う答え方をしていた過去の返事を、1通ずつ「これからは決まりどおり」か「この場合は例外」に片付けてください。</li>
         <li>片付けると、このテーマは完了です。スタッフ向けマニュアルができあがります。</li>
